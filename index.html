@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero de Tiempo Severo - Paraguay</title>
+
+    <!-- Bootstrap CSS para el diseño responsive -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS para el mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* Estilos personalizados para el tablero */
+        body {
+            background-color: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .dashboard-header {
+            background-color: #004085;
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .dashboard-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 8px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .filter-section {
+            background-color: #e9ecef;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .filter-section h5 {
+            margin-bottom: 0.75rem;
+        }
+        .data-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #004085;
+            color: white;
+            z-index: 10;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="dashboard-header">
+        <div class="container">
+            <h1 class="text-center">Tablero de Fenómenos Meteorológicos Severos</h1>
+            <p class="text-center mb-0">Visualización de datos reportados en Paraguay</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Sección de Filtros -->
+        <div class="row">
+            <div class="col-12">
+                <div class="dashboard-card filter-section">
+                    <h5>Filtros</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="departamentoFilter" class="form-label">Departamento:</label>
+                            <select id="departamentoFilter" class="form-select">
+                                <option value="">Todos los Departamentos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de Fenómeno:</label>
+                            <div id="fenomenoFilter">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="checkGRA" value="GRA" checked>
+                                    <label class="form-check-label" for="checkGRA">Granizo (GRA)</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="checkRAF" value="RAF" checked>
+                                    <label class="form-check-label" for="checkRAF">Ráfaga (RAF)</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="checkTOR" value="TOR" checked>
+                                    <label class="form-check-label" for="checkTOR">Tornado (TOR)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje de Carga -->
+        <div id="loadingMessage" class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando datos desde Google Sheets...</p>
+        </div>
+
+        <!-- Contenido Principal del Tablero (inicialmente oculto) -->
+        <div id="dashboardContent" style="display: none;">
+            <div class="row">
+                <!-- Mapa -->
+                <div class="col-lg-8">
+                    <div class="dashboard-card">
+                        <h2 class="card-title">Mapa de Eventos</h2>
+                        <div id="map"></div>
+                    </div>
+                </div>
+                
+                <!-- Gráficos -->
+                <div class="col-lg-4">
+                    <div class="dashboard-card">
+                        <h2 class="card-title">Eventos por Tipo</h2>
+                        <div class="chart-container">
+                            <canvas id="fenomenoChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h2 class="card-title">Eventos por Departamento</h2>
+                        <div class="chart-container">
+                            <canvas id="departamentoChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Datos -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="dashboard-card">
+                        <h2 class="card-title">Registros Detallados</h2>
+                        <div class="data-table-container">
+                            <table id="dataTable" class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Localidad</th>
+                                        <th>Departamento</th>
+                                        <th>Fenómeno</th>
+                                        <th>Intensidad</th>
+                                        <th>Descripción</th>
+                                        <th>Fuente</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Las filas se insertarán aquí con JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts de Bootstrap, Leaflet y Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // URL del Google Sheet publicado como CSV
+            const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s/pub?output=csv';
+            
+            let allData = [];
+            let map;
+            let markersLayer;
+            let fenomenoChart;
+            let departamentoChart;
+
+            // --- FUNCIONES PRINCIPALES ---
+
+            // 1. Obtener y procesar los datos desde el CSV
+            async function loadData() {
+                try {
+                    const response = await fetch(GOOGLE_SHEETS_URL);
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    const csvText = await response.text();
+                    allData = parseCSV(csvText);
+                    
+                    // Una vez cargados los datos, inicializamos el tablero
+                    initializeDashboard();
+                } catch (error) {
+                    console.error("No se pudieron cargar los datos:", error);
+                    document.getElementById('loadingMessage').innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            <h4 class="alert-heading">Error al cargar los datos</h4>
+                            <p>No fue posible obtener la información desde Google Sheets. Verifica la URL y que la hoja esté publicada.</p>
+                            <hr>
+                            <p class="mb-0">Error: ${error.message}</p>
+                        </div>`;
+                }
+            }
+
+            // 2. Parsear el texto CSV a un array de objetos
+            function parseCSV(csvText) {
+                const lines = csvText.split('\n').filter(line => line.trim() !== '');
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const data = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                    if (values.length === headers.length) {
+                        let row = {};
+                        headers.forEach((header, index) => {
+                            row[header] = values[index];
+                        });
+                        // Limpieza y conversión de datos
+                        row['Latitud (grados, 4 dec.)'] = parseFloat(row['Latitud (grados, 4 dec.)']);
+                        row['Longitud (grados, 4 dec.)'] = parseFloat(row['Longitud (grados, 4 dec.)']);
+                        // Formatear la fecha para mejor visualización
+                        const fechaStr = row['Fecha (AAAAMMDD)'];
+                        if (fechaStr && fechaStr.length === 8) {
+                            row['Fecha (AAAAMMDD)'] = `${fechaStr.substring(0, 4)}-${fechaStr.substring(4, 6)}-${fechaStr.substring(6, 8)}`;
+                        }
+                        data.push(row);
+                    }
+                }
+                return data;
+            }
+
+            // 3. Inicializar todos los componentes del tablero
+            function initializeDashboard() {
+                // Ocultar mensaje de carga y mostrar contenido
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+
+                initMap();
+                initCharts();
+                populateFilters();
+                updateDashboard(); // Primera actualización con todos los datos
+
+                // Añadir listeners a los filtros
+                document.getElementById('departamentoFilter').addEventListener('change', updateDashboard);
+                document.querySelectorAll('#fenomenoFilter input').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateDashboard);
+                });
+            }
+
+            // --- FUNCIONES DE INICIALIZACIÓN DE COMPONENTES ---
+
+            function initMap() {
+                // Inicializar el mapa centrado en Paraguay
+                map = L.map('map').setView([-23.4425, -58.4438], 6);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+                markersLayer = L.layerGroup().addTo(map);
+            }
+
+            function initCharts() {
+                // Gráfico de fenómenos (tipo pie)
+                const fenomenoCtx = document.getElementById('fenomenoChart').getContext('2d');
+                fenomenoChart = new Chart(fenomenoCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            data: [],
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+
+                // Gráfico de departamentos (tipo barra)
+                const departamentoCtx = document.getElementById('departamentoChart').getContext('2d');
+                departamentoChart = new Chart(departamentoCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Número de Eventos',
+                            data: [],
+                            backgroundColor: '#36A2EB'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+
+            function populateFilters() {
+                const departamentoSelect = document.getElementById('departamentoFilter');
+                const departamentos = [...new Set(allData.map(item => item['Departamento']))].sort();
+
+                departamentos.forEach(dep => {
+                    if (dep) {
+                        const option = document.createElement('option');
+                        option.value = dep;
+                        option.textContent = dep;
+                        departamentoSelect.appendChild(option);
+                    }
+                });
+            }
+
+            // --- FUNCIÓN DE ACTUALIZACIÓN (CORAZÓN DEL TABLERO) ---
+
+            function updateDashboard() {
+                // Obtener valores de los filtros
+                const selectedDepartamento = document.getElementById('departamentoFilter').value;
+                const selectedFenomenos = Array.from(document.querySelectorAll('#fenomenoFilter input:checked')).map(cb => cb.value);
+
+                // Filtrar los datos
+                const filteredData = allData.filter(item => {
+                    const matchesDepartamento = !selectedDepartamento || item['Departamento'] === selectedDepartamento;
+                    const matchesFenomeno = selectedFenomenos.includes(item['Tipo de fenómeno (GRA/RAF/TOR)']);
+                    return matchesDepartamento && matchesFenomeno;
+                });
+
+                // Actualizar cada componente con los datos filtrados
+                updateMap(filteredData);
+                updateCharts(filteredData);
+                updateTable(filteredData);
+            }
+
+            // --- FUNCIONES DE ACTUALIZACIÓN DE CADA COMPONENTE ---
+
+            function updateMap(data) {
+                markersLayer.clearLayers();
+                data.forEach(item => {
+                    const lat = item['Latitud (grados, 4 dec.)'];
+                    const lon = item['Longitud (grados, 4 dec.)'];
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        const popupContent = `
+                            <strong>${item['Localidad']}</strong> (${item['Departamento']})<br>
+                            <b>Fenómeno:</b> ${item['Tipo de fenómeno (GRA/RAF/TOR)']}<br>
+                            <b>Fecha:</b> ${item['Fecha (AAAAMMDD)']}<br>
+                            <b>Intensidad:</b> ${item['Intensidad / Tamaño / Escala']}<br>
+                            <b>Descripción:</b> ${item['Descripción / Información adicional']}
+                        `;
+                        L.marker([lat, lon]).bindPopup(popupContent).addTo(markersLayer);
+                    }
+                });
+            }
+
+            function updateCharts(data) {
+                // Actualizar gráfico de fenómenos
+                const fenomenoCounts = _.countBy(data, 'Tipo de fenómeno (GRA/RAF/TOR)');
+                fenomenoChart.data.labels = Object.keys(fenomenoCounts);
+                fenomenoChart.data.datasets[0].data = Object.values(fenomenoCounts);
+                fenomenoChart.update();
+
+                // Actualizar gráfico de departamentos
+                const departamentoCounts = _.countBy(data, 'Departamento');
+                const sortedDepartamentos = Object.entries(departamentoCounts).sort((a, b) => b[1] - a[1]).slice(0, 10); // Top 10
+                departamentoChart.data.labels = sortedDepartamentos.map(d => d[0]);
+                departamentoChart.data.datasets[0].data = sortedDepartamentos.map(d => d[1]);
+                departamentoChart.update();
+            }
+            
+            function updateTable(data) {
+                const tableBody = document.querySelector('#dataTable tbody');
+                tableBody.innerHTML = ''; // Limpiar tabla
+                
+                // Ordenar datos por fecha descendente
+                data.sort((a, b) => new Date(b['Fecha (AAAAMMDD)']) - new Date(a['Fecha (AAAAMMDD)']));
+
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item['Fecha (AAAAMMDD)']}</td>
+                        <td>${item['Localidad']}</td>
+                        <td>${item['Departamento']}</td>
+                        <td><span class="badge bg-primary">${item['Tipo de fenómeno (GRA/RAF/TOR)']}</span></td>
+                        <td>${item['Intensidad / Tamaño / Escala']}</td>
+                        <td>${item['Descripción / Información adicional']}</td>
+                        <td><a href="${item['Fuente']}" target="_blank">Ver fuente</a></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+
+            // Pequeña función de utilidad para contar, similar a _.countBy de lodash
+            // Se añade para no depender de una librería externa más.
+            function countBy(arr, key) {
+                return arr.reduce((acc, item) => {
+                    const val = item[key];
+                    acc[val] = (acc[val] || 0) + 1;
+                    return acc;
+                }, {});
+            }
+            // Reemplazamos la llamada a _.countBy con nuestra función
+            _.countBy = countBy;
+
+
+            // Iniciar la carga de datos al cargar la página
+            loadData();
+        });
+    </script>
+</body>
+</html>
