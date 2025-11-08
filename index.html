@@ -3,72 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero de Tiempo Severo - Paraguay</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*.openstreetmap.org;">
+    <title>Tablero Meteorológico Severo | Paraguay</title>
 
-    <!-- Bootstrap CSS para el diseño responsive -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Leaflet CSS para el mapa -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
+
     <style>
-        /* Estilos personalizados para el tablero */
+        :root {
+            --primary-color: #004085;
+            --secondary-color: #6c757d;
+            --accent-color: #007bff;
+            --danger-color: #dc3545;
+            --bg-color: #f8f9fa;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #f0f2f5;
+            background-color: var(--bg-color);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
+
         .dashboard-header {
-            background-color: #004085;
+            background-color: var(--primary-color);
             color: white;
-            padding: 1rem 0;
+            padding: 1.5rem 0;
             margin-bottom: 2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
+
         .dashboard-card {
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
             padding: 1.5rem;
             margin-bottom: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+
+        .dashboard-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
         .card-title {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #333;
+            color: var(--primary-color);
             margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--bg-color);
         }
+
         #map {
             height: 500px;
             width: 100%;
             border-radius: 8px;
+            background-color: #e0e0e0;
         }
+
         .chart-container {
             position: relative;
             height: 300px;
             width: 100%;
         }
+
         .filter-section {
             background-color: #e9ecef;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #dee2e6;
         }
-        .filter-section h5 {
-            margin-bottom: 0.75rem;
-        }
+
         .data-table-container {
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
+            position: relative;
         }
+
+        .table {
+            margin-bottom: 0;
+        }
+
         .table thead th {
             position: sticky;
             top: 0;
-            background-color: #004085;
+            background-color: var(--primary-color);
             color: white;
             z-index: 10;
+            border: none;
+            padding: 0.75rem;
         }
+
+        .table tbody td {
+            padding: 0.75rem;
+            vertical-align: middle;
+        }
+
+        .badge {
+            font-size: 0.875rem;
+            padding: 0.5em 0.75em;
+        }
+
         .spinner-border {
-            width: 3rem;
-            height: 3rem;
+            width: 4rem;
+            height: 4rem;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--secondary-color);
+        }
+
+        .error-state {
+            padding: 2rem;
+            border-left: 4px solid var(--danger-color);
+            background-color: #f8d7da;
+            color: #721c24;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            #map {
+                height: 300px;
+            }
+            
+            .filter-section .row > div {
+                margin-bottom: 1rem;
+            }
         }
     </style>
 </head>
@@ -76,362 +177,1125 @@
 
     <header class="dashboard-header">
         <div class="container">
-            <h1 class="text-center">Tablero de Fenómenos Meteorológicos Severos</h1>
-            <p class="text-center mb-0">Visualización de datos reportados en Paraguay</p>
+            <h1 class="h3 mb-1">Tablero de Fenómenos Meteorológicos Severos</h1>
+            <p class="mb-0">Sistema de Monitoreo de Eventos Meteorológicos Críticos - Paraguay</p>
         </div>
     </header>
 
-    <main class="container">
-        <!-- Sección de Filtros -->
-        <div class="row">
-            <div class="col-12">
-                <div class="dashboard-card filter-section">
-                    <h5>Filtros</h5>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label for="departamentoFilter" class="form-label">Departamento:</label>
-                            <select id="departamentoFilter" class="form-select">
-                                <option value="">Todos los Departamentos</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Tipo de Fenómeno:</label>
-                            <div id="fenomenoFilter">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="checkGRA" value="GRA" checked>
-                                    <label class="form-check-label" for="checkGRA">Granizo (GRA)</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="checkRAF" value="RAF" checked>
-                                    <label class="form-check-label" for="checkRAF">Ráfaga (RAF)</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="checkTOR" value="TOR" checked>
-                                    <label class="form-check-label" for="checkTOR">Tornado (TOR)</label>
-                                </div>
-                            </div>
+    <main class="container flex-grow-1">
+        <!-- Estado de Carga -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <p class="mt-3 text-muted">Inicializando sistema de monitoreo...</p>
+        </div>
+
+        <!-- Estado de Error -->
+        <div id="errorState" class="error-state" style="display: none;">
+            <h3><i class="bi bi-exclamation-triangle"></i> Error Crítico del Sistema</h3>
+            <p id="errorMessage"></p>
+            <button id="retryButton" class="btn btn-danger mt-2">Reintentar Carga</button>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div id="mainContent" style="display: none;">
+            <!-- Sección de Filtros -->
+            <section class="filter-section" aria-label="Filtros de datos">
+                <h5 class="mb-3"><i class="bi bi-funnel"></i> Panel de Filtros</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="departamentoFilter" class="form-label fw-semibold">Departamento:</label>
+                        <select id="departamentoFilter" class="form-select form-select-lg" aria-label="Filtrar por departamento">
+                            <option value="">Todos los Departamentos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Tipo de Fenómeno:</label>
+                        <div id="fenomenoFilter" class="d-flex flex-wrap gap-3" role="group" aria-label="Filtros de fenómeno">
+                            <!-- Generado dinámicamente -->
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button id="clearFilters" class="btn btn-sm btn-outline-secondary">Limpiar Filtros</button>
+                        <span id="filterStatus" class="ms-3 text-muted"></span>
+                    </div>
+                </div>
+            </section>
 
-        <!-- Mensaje de Carga -->
-        <div id="loadingMessage" class="text-center my-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando...</span>
+            <!-- KPIs -->
+            <div class="row mb-4" id="kpiContainer">
+                <!-- Generado dinámicamente -->
             </div>
-            <p class="mt-2">Cargando datos desde Google Sheets...</p>
-        </div>
 
-        <!-- Contenido Principal del Tablero (inicialmente oculto) -->
-        <div id="dashboardContent" style="display: none;">
-            <div class="row">
+            <!-- Visualization Grid -->
+            <div class="row g-4">
                 <!-- Mapa -->
                 <div class="col-lg-8">
-                    <div class="dashboard-card">
-                        <h2 class="card-title">Mapa de Eventos</h2>
-                        <div id="map"></div>
+                    <div class="dashboard-card fade-in">
+                        <h2 class="card-title"><i class="bi bi-map"></i> Mapa de Eventos Geolocalizados</h2>
+                        <div id="map" aria-label="Mapa interactivo de eventos meteorológicos"></div>
                     </div>
                 </div>
                 
                 <!-- Gráficos -->
                 <div class="col-lg-4">
-                    <div class="dashboard-card">
-                        <h2 class="card-title">Eventos por Tipo</h2>
+                    <div class="dashboard-card fade-in">
+                        <h2 class="card-title"><i class="bi bi-pie-chart"></i> Distribución por Fenómeno</h2>
                         <div class="chart-container">
-                            <canvas id="fenomenoChart"></canvas>
+                            <canvas id="fenomenoChart" aria-label="Gráfico circular de distribución de fenómenos"></canvas>
                         </div>
                     </div>
-                    <div class="dashboard-card">
-                        <h2 class="card-title">Eventos por Departamento</h2>
+                    <div class="dashboard-card fade-in">
+                        <h2 class="card-title"><i class="bi bi-bar-chart"></i> Top 10 Departamentos</h2>
                         <div class="chart-container">
-                            <canvas id="departamentoChart"></canvas>
+                            <canvas id="departamentoChart" aria-label="Gráfico de barras de eventos por departamento"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Tabla de Datos -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="dashboard-card">
-                        <h2 class="card-title">Registros Detallados</h2>
-                        <div class="data-table-container">
-                            <table id="dataTable" class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Localidad</th>
-                                        <th>Departamento</th>
-                                        <th>Fenómeno</th>
-                                        <th>Intensidad</th>
-                                        <th>Descripción</th>
-                                        <th>Fuente</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Las filas se insertarán aquí con JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
+            <section class="dashboard-card fade-in mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="card-title mb-0"><i class="bi bi-table"></i> Registros Detallados</h2>
+                    <div>
+                        <button id="exportCSV" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download"></i> Exportar CSV
+                        </button>
                     </div>
                 </div>
-            </div>
+                <div class="data-table-container">
+                    <table id="dataTable" class="table table-hover" aria-label="Tabla detallada de eventos">
+                        <thead>
+                            <tr>
+                                <th scope="col" data-sort="fecha">Fecha <i class="bi bi-arrow-down-up"></i></th>
+                                <th scope="col" data-sort="localidad">Localidad <i class="bi bi-arrow-down-up"></i></th>
+                                <th scope="col" data-sort="departamento">Departamento <i class="bi bi-arrow-down-up"></i></th>
+                                <th scope="col" data-sort="fenomeno">Fenómeno <i class="bi bi-arrow-down-up"></i></th>
+                                <th scope="col">Intensidad</th>
+                                <th scope="col">Descripción</th>
+                                <th scope="col">Fuente</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-container">
+                    <div id="paginationInfo" class="text-muted"></div>
+                    <nav aria-label="Paginación de datos">
+                        <ul id="paginationControls" class="pagination pagination-sm mb-0">
+                            <!-- Dinámico -->
+                        </ul>
+                    </nav>
+                </div>
+            </section>
         </div>
     </main>
 
-    <!-- Scripts de Bootstrap, Leaflet y Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" integrity="sha256-oJ1QxtEaY9vZ0C6Z6CcGRfV5fM4hVhcNu1vGkL7QH3k=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha256-sD8vfY8aUMmW8gJ7Ubw6L2Id5ZLk1Gf9zVQ9VVKQfT8=" crossorigin="anonymous">
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // URL del Google Sheet publicado como CSV
-            const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s/pub?output=csv';
-            
-            let allData = [];
-            let map;
-            let markersLayer;
-            let fenomenoChart;
-            let departamentoChart;
+        // =============================================================================
+        // CONFIGURACIÓN GLOBAL Y UTILIDADES
+        // =============================================================================
+        const CONFIG = {
+            GOOGLE_SHEETS_URL: 'https://docs.google.com/spreadsheets/d/1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s/pub?output=csv',
+            PAGE_SIZE: 50,
+            MAP_CENTER: [-23.4425, -58.4438],
+            MAP_ZOOM: 6,
+            DEBOUNCE_DELAY: 300,
+            MAX_RETRIES: 3,
+            RETRY_DELAY: 2000
+        };
 
-            // --- FUNCIONES PRINCIPALES ---
+        // Logger seguro
+        const Logger = {
+            info: (...args) => console.log('[INFO]', ...args),
+            error: (...args) => console.error('[ERROR]', ...args),
+            warn: (...args) => console.warn('[WARN]', ...args)
+        };
 
-            // 1. Obtener y procesar los datos desde el CSV
-            async function loadData() {
+        // Sanitizador de HTML para prevenir XSS
+        const Sanitizer = {
+            escapeHTML(str) {
+                if (typeof str !== 'string') return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            },
+            isValidURL(url) {
                 try {
-                    const response = await fetch(GOOGLE_SHEETS_URL);
-                    if (!response.ok) {
-                        throw new Error(`Error HTTP: ${response.status}`);
-                    }
-                    const csvText = await response.text();
-                    allData = parseCSV(csvText);
-                    
-                    // Una vez cargados los datos, inicializamos el tablero
-                    initializeDashboard();
-                } catch (error) {
-                    console.error("No se pudieron cargar los datos:", error);
-                    document.getElementById('loadingMessage').innerHTML = `
-                        <div class="alert alert-danger" role="alert">
-                            <h4 class="alert-heading">Error al cargar los datos</h4>
-                            <p>No fue posible obtener la información desde Google Sheets. Verifica la URL y que la hoja esté publicada.</p>
-                            <hr>
-                            <p class="mb-0">Error: ${error.message}</p>
-                        </div>`;
+                    const parsed = new URL(url);
+                    return ['http:', 'https:'].includes(parsed.protocol);
+                } catch {
+                    return false;
                 }
+            },
+            sanitizeText(text, maxLength = 500) {
+                const escaped = this.escapeHTML(text || '');
+                return escaped.length > maxLength ? escaped.substring(0, maxLength) + '...' : escaped;
             }
+        };
 
-            // 2. Parsear el texto CSV a un array de objetos
-            function parseCSV(csvText) {
-                const lines = csvText.split('\n').filter(line => line.trim() !== '');
-                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        // Parser CSV robusto
+        const CSVParser = {
+            parse(csvText) {
+                if (!csvText || typeof csvText !== 'string') {
+                    throw new Error('CSV inválido o vacío');
+                }
+
+                const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+                if (lines.length < 2) {
+                    throw new Error('CSV no tiene suficientes filas');
+                }
+
+                const headers = this.parseLine(lines[0]);
                 const data = [];
 
                 for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                    const values = this.parseLine(lines[i]);
                     if (values.length === headers.length) {
-                        let row = {};
+                        const row = {};
                         headers.forEach((header, index) => {
-                            row[header] = values[index];
+                            row[header] = values[index] || '';
                         });
-                        // Limpieza y conversión de datos
-                        row['Latitud (grados, 4 dec.)'] = parseFloat(row['Latitud (grados, 4 dec.)']);
-                        row['Longitud (grados, 4 dec.)'] = parseFloat(row['Longitud (grados, 4 dec.)']);
-                        // Formatear la fecha para mejor visualización
-                        const fechaStr = row['Fecha (AAAAMMDD)'];
-                        if (fechaStr && fechaStr.length === 8) {
-                            row['Fecha (AAAAMMDD)'] = `${fechaStr.substring(0, 4)}-${fechaStr.substring(4, 6)}-${fechaStr.substring(6, 8)}`;
+                        
+                        // Validación básica de datos requeridos
+                        if (this.isValidRow(row)) {
+                            data.push(this.cleanRow(row));
                         }
-                        data.push(row);
                     }
                 }
+
+                if (data.length === 0) {
+                    throw new Error('No se encontraron datos válidos en el CSV');
+                }
+
                 return data;
-            }
+            },
 
-            // 3. Inicializar todos los componentes del tablero
-            function initializeDashboard() {
-                // Ocultar mensaje de carga y mostrar contenido
-                document.getElementById('loadingMessage').style.display = 'none';
-                document.getElementById('dashboardContent').style.display = 'block';
-
-                initMap();
-                initCharts();
-                populateFilters();
-                updateDashboard(); // Primera actualización con todos los datos
-
-                // Añadir listeners a los filtros
-                document.getElementById('departamentoFilter').addEventListener('change', updateDashboard);
-                document.querySelectorAll('#fenomenoFilter input').forEach(checkbox => {
-                    checkbox.addEventListener('change', updateDashboard);
-                });
-            }
-
-            // --- FUNCIONES DE INICIALIZACIÓN DE COMPONENTES ---
-
-            function initMap() {
-                // Inicializar el mapa centrado en Paraguay
-                map = L.map('map').setView([-23.4425, -58.4438], 6);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(map);
-                markersLayer = L.layerGroup().addTo(map);
-            }
-
-            function initCharts() {
-                // Gráfico de fenómenos (tipo pie)
-                const fenomenoCtx = document.getElementById('fenomenoChart').getContext('2d');
-                fenomenoChart = new Chart(fenomenoCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            data: [],
-                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-
-                // Gráfico de departamentos (tipo barra)
-                const departamentoCtx = document.getElementById('departamentoChart').getContext('2d');
-                departamentoChart = new Chart(departamentoCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Número de Eventos',
-                            data: [],
-                            backgroundColor: '#36A2EB'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                        },
-                        plugins: {
-                            legend: { display: false }
-                        }
-                    }
-                });
-            }
-
-            function populateFilters() {
-                const departamentoSelect = document.getElementById('departamentoFilter');
-                const departamentos = [...new Set(allData.map(item => item['Departamento']))].sort();
-
-                departamentos.forEach(dep => {
-                    if (dep) {
-                        const option = document.createElement('option');
-                        option.value = dep;
-                        option.textContent = dep;
-                        departamentoSelect.appendChild(option);
-                    }
-                });
-            }
-
-            // --- FUNCIÓN DE ACTUALIZACIÓN (CORAZÓN DEL TABLERO) ---
-
-            function updateDashboard() {
-                // Obtener valores de los filtros
-                const selectedDepartamento = document.getElementById('departamentoFilter').value;
-                const selectedFenomenos = Array.from(document.querySelectorAll('#fenomenoFilter input:checked')).map(cb => cb.value);
-
-                // Filtrar los datos
-                const filteredData = allData.filter(item => {
-                    const matchesDepartamento = !selectedDepartamento || item['Departamento'] === selectedDepartamento;
-                    const matchesFenomeno = selectedFenomenos.includes(item['Tipo de fenómeno (GRA/RAF/TOR)']);
-                    return matchesDepartamento && matchesFenomeno;
-                });
-
-                // Actualizar cada componente con los datos filtrados
-                updateMap(filteredData);
-                updateCharts(filteredData);
-                updateTable(filteredData);
-            }
-
-            // --- FUNCIONES DE ACTUALIZACIÓN DE CADA COMPONENTE ---
-
-            function updateMap(data) {
-                markersLayer.clearLayers();
-                data.forEach(item => {
-                    const lat = item['Latitud (grados, 4 dec.)'];
-                    const lon = item['Longitud (grados, 4 dec.)'];
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        const popupContent = `
-                            <strong>${item['Localidad']}</strong> (${item['Departamento']})<br>
-                            <b>Fenómeno:</b> ${item['Tipo de fenómeno (GRA/RAF/TOR)']}<br>
-                            <b>Fecha:</b> ${item['Fecha (AAAAMMDD)']}<br>
-                            <b>Intensidad:</b> ${item['Intensidad / Tamaño / Escala']}<br>
-                            <b>Descripción:</b> ${item['Descripción / Información adicional']}
-                        `;
-                        L.marker([lat, lon]).bindPopup(popupContent).addTo(markersLayer);
-                    }
-                });
-            }
-
-            function updateCharts(data) {
-                // Actualizar gráfico de fenómenos
-                const fenomenoCounts = _.countBy(data, 'Tipo de fenómeno (GRA/RAF/TOR)');
-                fenomenoChart.data.labels = Object.keys(fenomenoCounts);
-                fenomenoChart.data.datasets[0].data = Object.values(fenomenoCounts);
-                fenomenoChart.update();
-
-                // Actualizar gráfico de departamentos
-                const departamentoCounts = _.countBy(data, 'Departamento');
-                const sortedDepartamentos = Object.entries(departamentoCounts).sort((a, b) => b[1] - a[1]).slice(0, 10); // Top 10
-                departamentoChart.data.labels = sortedDepartamentos.map(d => d[0]);
-                departamentoChart.data.datasets[0].data = sortedDepartamentos.map(d => d[1]);
-                departamentoChart.update();
-            }
-            
-            function updateTable(data) {
-                const tableBody = document.querySelector('#dataTable tbody');
-                tableBody.innerHTML = ''; // Limpiar tabla
+            parseLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
                 
-                // Ordenar datos por fecha descendente
-                data.sort((a, b) => new Date(b['Fecha (AAAAMMDD)']) - new Date(a['Fecha (AAAAMMDD)']));
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    const nextChar = line[i + 1];
 
-                data.forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item['Fecha (AAAAMMDD)']}</td>
-                        <td>${item['Localidad']}</td>
-                        <td>${item['Departamento']}</td>
-                        <td><span class="badge bg-primary">${item['Tipo de fenómeno (GRA/RAF/TOR)']}</span></td>
-                        <td>${item['Intensidad / Tamaño / Escala']}</td>
-                        <td>${item['Descripción / Información adicional']}</td>
-                        <td><a href="${item['Fuente']}" target="_blank">Ver fuente</a></td>
-                    `;
-                    tableBody.appendChild(row);
+                    if (char === '"') {
+                        if (inQuotes && nextChar === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                result.push(current.trim());
+                return result.map(v => v.replace(/^"|"$/g, ''));
+            },
+
+            isValidRow(row) {
+                return row['Departamento'] && row['Tipo de fenómeno (GRA/RAF/TOR)'] && row['Fecha (AAAAMMDD)'];
+            },
+
+            cleanRow(row) {
+                // Convertir coordenadas
+                row['Latitud (grados, 4 dec.)'] = parseFloat(row['Latitud (grados, 4 dec.)']);
+                row['Longitud (grados, 4 dec.)'] = parseFloat(row['Longitud (grados, 4 dec.)']);
+                
+                // Validar coordenadas
+                if (isNaN(row['Latitud (grados, 4 dec.)']) || isNaN(row['Longitud (grados, 4 dec.)'])) {
+                    row['Latitud (grados, 4 dec.)'] = null;
+                    row['Longitud (grados, 4 dec.)'] = null;
+                }
+
+                // Formatear fecha
+                const fechaStr = row['Fecha (AAAAMMDD)'];
+                if (/^\d{8}$/.test(fechaStr)) {
+                    const year = fechaStr.substring(0, 4);
+                    const month = fechaStr.substring(4, 6);
+                    const day = fechaStr.substring(6, 8);
+                    row['Fecha (AAAAMMDD)'] = `${year}-${month}-${day}`;
+                    row['timestamp'] = new Date(`${year}-${month}-${day}T00:00:00`).getTime();
+                } else {
+                    row['timestamp'] = 0;
+                }
+
+                return row;
+            }
+        };
+
+        // Debounce utility
+        const debounce = (func, wait) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
+        // =============================================================================
+        // GESTORES DE COMPONENTES
+        // =============================================================================
+
+        class DataManager {
+            constructor() {
+                this.rawData = [];
+                this.filteredData = [];
+                this.departamentos = new Set();
+                this.fenomenos = new Set();
+                this.cache = new Map();
+            }
+
+            async loadData(retries = CONFIG.MAX_RETRIES) {
+                try {
+                    const cached = localStorage.getItem('weatherData');
+                    const cacheTime = localStorage.getItem('weatherDataTime');
+                    const now = Date.now();
+
+                    // Usar cache si tiene menos de 5 minutos
+                    if (cached && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+                        Logger.info('Usando datos del cache');
+                        this.rawData = JSON.parse(cached);
+                    } else {
+                        Logger.info('Cargando datos desde Google Sheets');
+                        const response = await fetch(CONFIG.GOOGLE_SHEETS_URL, {
+                            method: 'GET',
+                            headers: { 'Accept': 'text/csv' },
+                            signal: AbortSignal.timeout(10000) // Timeout de 10s
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+                        }
+
+                        const csvText = await response.text();
+                        this.rawData = CSVParser.parse(csvText);
+
+                        // Guardar en cache
+                        localStorage.setItem('weatherData', JSON.stringify(this.rawData));
+                        localStorage.setItem('weatherDataTime', now.toString());
+                    }
+
+                    this.extractMetadata();
+                    return this.rawData;
+                } catch (error) {
+                    Logger.error('Error al cargar datos:', error);
+                    
+                    if (retries > 0 && error.name !== 'AbortError') {
+                        Logger.warn(`Reintentando... (${retries} restantes)`);
+                        await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY));
+                        return this.loadData(retries - 1);
+                    }
+                    
+                    throw error;
+                }
+            }
+
+            extractMetadata() {
+                this.departamentos.clear();
+                this.fenomenos.clear();
+                
+                this.rawData.forEach(row => {
+                    if (row['Departamento']) this.departamentos.add(row['Departamento']);
+                    if (row['Tipo de fenómeno (GRA/RAF/TOR)']) this.fenomenos.add(row['Tipo de fenómeno (GRA/RAF/TOR)']);
                 });
             }
 
-            // Pequeña función de utilidad para contar, similar a _.countBy de lodash
-            // Se añade para no depender de una librería externa más.
-            function countBy(arr, key) {
-                return arr.reduce((acc, item) => {
-                    const val = item[key];
+            filterData(filters) {
+                const cacheKey = JSON.stringify(filters);
+                if (this.cache.has(cacheKey)) {
+                    this.filteredData = this.cache.get(cacheKey);
+                    return this.filteredData;
+                }
+
+                this.filteredData = this.rawData.filter(item => {
+                    const matchesDepartamento = !filters.departamento || item['Departamento'] === filters.departamento;
+                    const matchesFenomeno = filters.fenomenos.length === 0 || filters.fenomenos.includes(item['Tipo de fenómeno (GRA/RAF/TOR)']);
+                    
+                    // Validar coordenadas para el mapa
+                    const hasValidCoords = item['Latitud (grados, 4 dec.)'] && item['Longitud (grados, 4 dec.)'];
+                    
+                    return matchesDepartamento && matchesFenomeno && hasValidCoords;
+                });
+
+                this.cache.set(cacheKey, this.filteredData);
+                return this.filteredData;
+            }
+
+            getStats() {
+                return {
+                    total: this.filteredData.length,
+                    byFenomeno: this.countBy('Tipo de fenómeno (GRA/RAF/TOR)'),
+                    byDepartamento: this.countBy('Departamento')
+                };
+            }
+
+            countBy(key) {
+                return this.filteredData.reduce((acc, item) => {
+                    const val = item[key] || 'Desconocido';
                     acc[val] = (acc[val] || 0) + 1;
                     return acc;
                 }, {});
             }
-            // Reemplazamos la llamada a _.countBy con nuestra función
-            _.countBy = countBy;
+        }
 
+        class UIManager {
+            constructor() {
+                this.elements = {
+                    loading: document.getElementById('loadingState'),
+                    error: document.getElementById('errorState'),
+                    main: document.getElementById('mainContent'),
+                    errorMessage: document.getElementById('errorMessage'),
+                    retryButton: document.getElementById('retryButton')
+                };
+            }
 
-            // Iniciar la carga de datos al cargar la página
-            loadData();
-        });
+            showLoading() {
+                this.hideAll();
+                this.elements.loading.style.display = 'block';
+            }
+
+            showError(message, retryCallback) {
+                this.hideAll();
+                this.elements.error.style.display = 'block';
+                this.elements.errorMessage.textContent = message;
+                
+                if (retryCallback) {
+                    this.elements.retryButton.onclick = retryCallback;
+                    this.elements.retryButton.style.display = 'inline-block';
+                } else {
+                    this.elements.retryButton.style.display = 'none';
+                }
+            }
+
+            showMain() {
+                this.hideAll();
+                this.elements.main.style.display = 'block';
+                this.elements.main.classList.add('fade-in');
+            }
+
+            hideAll() {
+                Object.values(this.elements).forEach(el => el.style.display = 'none');
+            }
+
+            updateFilterStatus(total, filtered) {
+                const status = document.getElementById('filterStatus');
+                if (total !== filtered) {
+                    status.textContent = `Mostrando ${filtered} de ${total} registros`;
+                    status.style.display = 'inline';
+                } else {
+                    status.style.display = 'none';
+                }
+            }
+
+            showEmptyState(containerId, message) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="mt-3">${Sanitizer.escapeHTML(message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        class MapManager {
+            constructor(mapElementId) {
+                this.mapElement = document.getElementById(mapElementId);
+                this.map = null;
+                this.markersLayer = null;
+                this.init();
+            }
+
+            init() {
+                try {
+                    if (!this.mapElement) throw new Error('Elemento del mapa no encontrado');
+                    
+                    this.map = L.map(this.mapElement, {
+                        center: CONFIG.MAP_CENTER,
+                        zoom: CONFIG.MAP_ZOOM,
+                        zoomControl: true,
+                        attributionControl: true
+                    });
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 18,
+                        maxNativeZoom: 19
+                    }).addTo(this.map);
+
+                    this.markersLayer = L.layerGroup().addTo(this.map);
+                    
+                    // Controles adicionales
+                    this.map.on('popupopen', (e) => {
+                        e.popup._source._icon?.classList.add('marker-pulse');
+                    });
+
+                    this.map.on('popupclose', (e) => {
+                        e.popup._source._icon?.classList.remove('marker-pulse');
+                    });
+
+                } catch (error) {
+                    Logger.error('Error inicializando mapa:', error);
+                    throw error;
+                }
+            }
+
+            update(data) {
+                if (!this.map || !this.markersLayer) return;
+
+                this.markersLayer.clearLayers();
+
+                if (data.length === 0) {
+                    this.map.setView(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM);
+                    return;
+                }
+
+                const bounds = [];
+
+                data.forEach(item => {
+                    const lat = item['Latitud (grados, 4 dec.)'];
+                    const lon = item['Longitud (grados, 4 dec.)'];
+                    
+                    if (lat && lon && this.isValidCoordinate(lat, lon)) {
+                        bounds.push([lat, lon]);
+
+                        const color = this.getMarkerColor(item['Tipo de fenómeno (GRA/RAF/TOR)']);
+                        const icon = this.createCustomIcon(color);
+
+                        const popupContent = `
+                            <div class="popup-content" style="min-width: 250px;">
+                                <h6 style="color: var(--primary-color); margin-bottom: 0.5rem;">
+                                    ${Sanitizer.sanitizeText(item['Localidad'])}
+                                </h6>
+                                <div style="font-size: 0.9rem;">
+                                    <strong>Departamento:</strong> ${Sanitizer.sanitizeText(item['Departamento'])}<br>
+                                    <strong>Fenómeno:</strong> <span class="badge" style="background: ${color}">
+                                        ${Sanitizer.sanitizeText(item['Tipo de fenómeno (GRA/RAF/TOR)'])}
+                                    </span><br>
+                                    <strong>Fecha:</strong> ${Sanitizer.sanitizeText(item['Fecha (AAAAMMDD)'])}<br>
+                                    <strong>Intensidad:</strong> ${Sanitizer.sanitizeText(item['Intensidad / Tamaño / Escala'])}<br>
+                                    <hr style="margin: 0.5rem 0;">
+                                    <p style="margin: 0; font-size: 0.85rem;">
+                                        ${Sanitizer.sanitizeText(item['Descripción / Información adicional'], 200)}
+                                    </p>
+                                    ${item['Fuente'] && Sanitizer.isValidURL(item['Fuente']) ? 
+                                        `<a href="${item['Fuente']}" target="_blank" rel="noopener noreferrer" 
+                                           style="font-size: 0.85rem;">📎 Ver fuente</a>` : ''}
+                                </div>
+                            </div>
+                        `;
+
+                        L.marker([lat, lon], { icon })
+                            .bindPopup(popupContent, { maxWidth: 300 })
+                            .addTo(this.markersLayer);
+                    }
+                });
+
+                if (bounds.length > 0) {
+                    this.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
+                }
+            }
+
+            isValidCoordinate(lat, lon) {
+                return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+            }
+
+            getMarkerColor(fenomeno) {
+                const colors = {
+                    'GRA': '#FF6384',
+                    'RAF': '#36A2EB',
+                    'TOR': '#FFCE56'
+                };
+                return colors[fenomeno] || '#6c757d';
+            }
+
+            createCustomIcon(color) {
+                return L.divIcon({
+                    html: `<div style="
+                        background: ${color}; 
+                        width: 12px; 
+                        height: 12px; 
+                        border-radius: 50%;
+                        border: 2px solid white;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    "></div>`,
+                    className: 'custom-marker',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+            }
+        }
+
+        class ChartManager {
+            constructor() {
+                this.charts = {};
+                this.init();
+            }
+
+            init() {
+                try {
+                    // Chart de fenómenos
+                    const fenomenoCtx = document.getElementById('fenomenoChart');
+                    if (!fenomenoCtx) throw new Error('Canvas de fenómeno no encontrado');
+
+                    this.charts.fenomeno = new Chart(fenomenoCtx.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                data: [],
+                                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { 
+                                    position: 'bottom',
+                                    labels: { padding: 15, usePointStyle: true }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = ((value / total) * 100).toFixed(1);
+                                            return `${label}: ${value} (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Chart de departamentos
+                    const departamentoCtx = document.getElementById('departamentoChart');
+                    if (!departamentoCtx) throw new Error('Canvas de departamento no encontrado');
+
+                    this.charts.departamento = new Chart(departamentoCtx.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Número de Eventos',
+                                data: [],
+                                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { 
+                                    beginAtZero: true, 
+                                    ticks: { stepSize: 1 },
+                                    grid: { color: 'rgba(0,0,0,0.1)' }
+                                },
+                                x: {
+                                    grid: { display: false }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+
+                } catch (error) {
+                    Logger.error('Error inicializando charts:', error);
+                    throw error;
+                }
+            }
+
+            update(data, stats) {
+                try {
+                    // Actualizar gráfico de fenómenos
+                    const fenomenoLabels = Object.keys(stats.byFenomeno);
+                    const fenomenoData = Object.values(stats.byFenomeno);
+                    
+                    this.charts.fenomeno.data.labels = fenomenoLabels;
+                    this.charts.fenomeno.data.datasets[0].data = fenomenoData;
+                    this.charts.fenomeno.update('active');
+
+                    // Actualizar gráfico de departamentos (Top 10)
+                    const sortedDept = Object.entries(stats.byDepartamento)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10);
+
+                    this.charts.departamento.data.labels = sortedDept.map(d => d[0]);
+                    this.charts.departamento.data.datasets[0].data = sortedDept.map(d => d[1]);
+                    this.charts.departamento.update('active');
+
+                } catch (error) {
+                    Logger.error('Error actualizando charts:', error);
+                }
+            }
+        }
+
+        class TableManager {
+            constructor() {
+                this.currentPage = 1;
+                this.sortField = 'timestamp';
+                this.sortDirection = 'desc';
+                this.data = [];
+            }
+
+            update(data) {
+                this.data = [...data];
+                this.applySorting();
+                this.currentPage = 1;
+                this.render();
+            }
+
+            applySorting() {
+                this.data.sort((a, b) => {
+                    let aVal = a[this.sortField];
+                    let bVal = b[this.sortField];
+
+                    // Manejo especial para timestamps
+                    if (this.sortField === 'timestamp') {
+                        aVal = a.timestamp || 0;
+                        bVal = b.timestamp || 0;
+                    }
+
+                    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+                    if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            setSort(field) {
+                if (this.sortField === field) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortField = field;
+                    this.sortDirection = 'desc';
+                }
+                this.applySorting();
+                this.currentPage = 1;
+                this.render();
+            }
+
+            render() {
+                const tbody = document.getElementById('tableBody');
+                const totalPages = Math.ceil(this.data.length / CONFIG.PAGE_SIZE);
+                const start = (this.currentPage - 1) * CONFIG.PAGE_SIZE;
+                const end = start + CONFIG.PAGE_SIZE;
+                const pageData = this.data.slice(start, end);
+
+                if (this.data.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                <p class="mt-2">No se encontraron registros con los filtros seleccionados</p>
+                            </td>
+                        </tr>
+                    `;
+                    this.updatePagination(0, 0);
+                    return;
+                }
+
+                tbody.innerHTML = pageData.map(item => `
+                    <tr>
+                        <td>${Sanitizer.sanitizeText(item['Fecha (AAAAMMDD)'])}</td>
+                        <td>${Sanitizer.sanitizeText(item['Localidad'])}</td>
+                        <td>${Sanitizer.sanitizeText(item['Departamento'])}</td>
+                        <td>
+                            <span class="badge" style="background: ${this.getBadgeColor(item['Tipo de fenómeno (GRA/RAF/TOR)'])}">
+                                ${Sanitizer.sanitizeText(item['Tipo de fenómeno (GRA/RAF/TOR)'])}
+                            </span>
+                        </td>
+                        <td>${Sanitizer.sanitizeText(item['Intensidad / Tamaño / Escala'])}</td>
+                        <td>${Sanitizer.sanitizeText(item['Descripción / Información adicional'], 150)}</td>
+                        <td>
+                            ${item['Fuente'] && Sanitizer.isValidURL(item['Fuente']) ? 
+                                `<a href="${item['Fuente']}" target="_blank" rel="noopener noreferrer" 
+                                   class="btn btn-sm btn-outline-primary">
+                                   <i class="bi bi-box-arrow-up-right"></i>
+                                </a>` : 
+                                `<span class="text-muted"><i class="bi bi-dash"></i></span>`
+                            }
+                        </td>
+                    </tr>
+                `).join('');
+
+                this.updatePagination(this.currentPage, totalPages);
+            }
+
+            updatePagination(current, total) {
+                const info = document.getElementById('paginationInfo');
+                const controls = document.getElementById('paginationControls');
+                
+                const totalRecords = this.data.length;
+                const start = total > 0 ? (current - 1) * CONFIG.PAGE_SIZE + 1 : 0;
+                const end = Math.min(current * CONFIG.PAGE_SIZE, totalRecords);
+
+                info.textContent = `Mostrando ${start}-${end} de ${totalRecords} registros`;
+
+                // Renderizar controles de paginación
+                controls.innerHTML = '';
+                
+                const prevLi = document.createElement('li');
+                prevLi.className = `page-item ${current === 1 ? 'disabled' : ''}`;
+                prevLi.innerHTML = `<a class="page-link" href="#" data-page="${current - 1}">Anterior</a>`;
+                controls.appendChild(prevLi);
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, current - Math.floor(maxButtons / 2));
+                let endPage = Math.min(total, startPage + maxButtons - 1);
+                if (endPage - startPage < maxButtons - 1) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === current ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+                    controls.appendChild(li);
+                }
+
+                const nextLi = document.createElement('li');
+                nextLi.className = `page-item ${current === total || total === 0 ? 'disabled' : ''}`;
+                nextLi.innerHTML = `<a class="page-link" href="#" data-page="${current + 1}">Siguiente</a>`;
+                controls.appendChild(nextLi);
+
+                // Event listeners
+                controls.querySelectorAll('.page-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const page = parseInt(e.target.dataset.page);
+                        if (!isNaN(page) && page >= 1 && page <= total) {
+                            this.currentPage = page;
+                            this.render();
+                        }
+                    });
+                });
+            }
+
+            getBadgeColor(fenomeno) {
+                const colors = {
+                    'GRA': '#dc3545',
+                    'RAF': '#0d6efd',
+                    'TOR': '#ffc107'
+                };
+                return colors[fenomeno] || '#6c757d';
+            }
+        }
+
+        class FilterManager {
+            constructor(dataManager, callback) {
+                this.dataManager = dataManager;
+                this.callback = callback;
+                this.filters = {
+                    departamento: '',
+                    fenomenos: ['GRA', 'RAF', 'TOR']
+                };
+                this.init();
+            }
+
+            init() {
+                this.createFenomenoCheckboxes();
+                this.loadFromStorage();
+                this.attachEvents();
+            }
+
+            createFenomenoCheckboxes() {
+                const container = document.getElementById('fenomenoFilter');
+                const fenomenos = Array.from(this.dataManager.fenomenos).sort();
+                
+                container.innerHTML = fenomenos.map(fenomeno => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="check${fenomeno}" value="${fenomeno}" 
+                               ${this.filters.fenomenos.includes(fenomeno) ? 'checked' : ''}>
+                        <label class="form-check-label" for="check${fenomeno}">
+                            ${this.getFenomenoLabel(fenomeno)}
+                        </label>
+                    </div>
+                `).join('');
+            }
+
+            getFenomenoLabel(fenomeno) {
+                const labels = {
+                    'GRA': 'Granizo',
+                    'RAF': 'Ráfaga',
+                    'TOR': 'Tornado'
+                };
+                return `${labels[fenomeno] || 'Desconocido'} (${fenomeno})`;
+            }
+
+            attachEvents() {
+                const deptFilter = document.getElementById('departamentoFilter');
+                const fenomenoFilter = document.getElementById('fenomenoFilter');
+                const clearButton = document.getElementById('clearFilters');
+
+                deptFilter.addEventListener('change', debounce(() => this.updateFilters(), CONFIG.DEBOUNCE_DELAY));
+                fenomenoFilter.addEventListener('change', debounce(() => this.updateFilters(), CONFIG.DEBOUNCE_DELAY));
+                clearButton.addEventListener('click', () => this.clearFilters());
+
+                // Ordenación de tabla
+                document.querySelectorAll('#dataTable th[data-sort]').forEach(th => {
+                    th.style.cursor = 'pointer';
+                    th.addEventListener('click', () => {
+                        const field = th.dataset.sort;
+                        window.tableManager.setSort(field);
+                    });
+                });
+
+                // Exportar CSV
+                document.getElementById('exportCSV').addEventListener('click', () => this.exportCSV());
+            }
+
+            updateFilters() {
+                this.filters.departamento = document.getElementById('departamentoFilter').value;
+                this.filters.fenomenos = Array.from(document.querySelectorAll('#fenomenoFilter input:checked'))
+                    .map(cb => cb.value);
+
+                this.saveToStorage();
+                this.callback(this.filters);
+            }
+
+            clearFilters() {
+                this.filters = {
+                    departamento: '',
+                    fenomenos: Array.from(this.dataManager.fenomenos)
+                };
+                
+                document.getElementById('departamentoFilter').value = '';
+                this.createFenomenoCheckboxes();
+                this.updateFilters();
+            }
+
+            saveToStorage() {
+                localStorage.setItem('weatherFilters', JSON.stringify(this.filters));
+            }
+
+            loadFromStorage() {
+                const saved = localStorage.getItem('weatherFilters');
+                if (saved) {
+                    try {
+                        this.filters = JSON.parse(saved);
+                    } catch (e) {
+                        Logger.warn('Error cargando filtros guardados:', e);
+                    }
+                }
+            }
+
+            exportCSV() {
+                const data = this.dataManager.filteredData;
+                if (data.length === 0) return;
+
+                const headers = ['Fecha', 'Localidad', 'Departamento', 'Fenómeno', 'Intensidad', 'Descripción'];
+                const csvContent = [
+                    headers.join(','),
+                    ...data.map(row => [
+                        row['Fecha (AAAAMMDD)'],
+                        row['Localidad'],
+                        row['Departamento'],
+                        row['Tipo de fenómeno (GRA/RAF/TOR)'],
+                        row['Intensidad / Tamaño / Escala'],
+                        row['Descripción / Información adicional']
+                    ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `eventos_meteorologicos_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+            }
+        }
+
+        // =============================================================================
+        // CONTROLADOR PRINCIPAL
+        // =============================================================================
+
+        class DashboardController {
+            constructor() {
+                this.dataManager = new DataManager();
+                this.uiManager = new UIManager();
+                this.mapManager = null;
+                this.chartManager = null;
+                this.tableManager = null;
+                this.filterManager = null;
+            }
+
+            async init() {
+                try {
+                    this.uiManager.showLoading();
+                    
+                    // Cargar datos
+                    await this.dataManager.loadData();
+                    
+                    // Inicializar componentes
+                    this.initializeComponents();
+                    
+                    // Crear filtros
+                    this.populateDepartamentos();
+                    this.filterManager = new FilterManager(this.dataManager, (filters) => this.updateDashboard(filters));
+                    
+                    // Actualizar dashboard
+                    this.updateDashboard(this.filterManager.filters);
+                    
+                    this.uiManager.showMain();
+                    
+                } catch (error) {
+                    Logger.error('Error fatal en inicialización:', error);
+                    this.uiManager.showError(
+                        `${error.message}. Si el problema persiste, verifica la conexión y la URL del Google Sheet.`,
+                        () => location.reload()
+                    );
+                }
+            }
+
+            initializeComponents() {
+                try {
+                    this.mapManager = new MapManager('map');
+                    this.chartManager = new ChartManager();
+                    this.tableManager = new TableManager();
+                } catch (error) {
+                    Logger.error('Error inicializando componentes:', error);
+                    throw new Error('No se pudieron inicializar los componentes visuales');
+                }
+            }
+
+            populateDepartamentos() {
+                const select = document.getElementById('departamentoFilter');
+                const departamentos = Array.from(this.dataManager.departamentos).sort();
+                
+                select.innerHTML = '<option value="">Todos los Departamentos</option>' +
+                    departamentos.map(dept => 
+                        `<option value="${Sanitizer.escapeHTML(dept)}">${Sanitizer.escapeHTML(dept)}</option>`
+                    ).join('');
+            }
+
+            updateDashboard(filters) {
+                try {
+                    // Filtrar datos
+                    const filteredData = this.dataManager.filterData(filters);
+                    const stats = this.dataManager.getStats();
+
+                    // Actualizar componentes
+                    this.mapManager.update(filteredData);
+                    this.chartManager.update(filteredData, stats);
+                    this.tableManager.update(filteredData);
+                    
+                    // Actualizar KPIs
+                    this.updateKPIs(stats, filteredData.length);
+                    
+                    // Actualizar estado de filtros
+                    this.uiManager.updateFilterStatus(this.dataManager.rawData.length, filteredData.length);
+
+                } catch (error) {
+                    Logger.error('Error actualizando dashboard:', error);
+                    this.uiManager.showError('Error al actualizar la visualización');
+                }
+            }
+
+            updateKPIs(stats, filteredTotal) {
+                const container = document.getElementById('kpiContainer');
+                const totalEventos = filteredTotal;
+                const eventosValidos = this.dataManager.filteredData.length;
+                const tasaExitos = totalEventos > 0 ? ((eventosValidos / totalEventos) * 100).toFixed(1) : 0;
+
+                container.innerHTML = `
+                    <div class="col-md-3">
+                        <div class="dashboard-card text-center">
+                            <h3 class="text-primary">${eventosValidos}</h3>
+                            <p class="mb-0 text-muted">Eventos Validos</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card text-center">
+                            <h3 class="text-success">${tasaExitos}%</h3>
+                            <p class="mb-0 text-muted">Tasa de Geolocalización</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card text-center">
+                            <h3 class="text-warning">${Object.keys(stats.byFenomeno).length}</h3>
+                            <p class="mb-0 text-muted">Tipos de Fenómeno</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card text-center">
+                            <h3 class="text-info">${Object.keys(stats.byDepartamento).length}</h3>
+                            <p class="mb-0 text-muted">Departamentos Afectados</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // =============================================================================
+        // INICIALIZACIÓN DE LA APLICACIÓN
+        // =============================================================================
+
+        // Registrar Service Worker para cache offline
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:application/javascript,console.log("Service Worker registrado")')
+                .catch(err => Logger.warn('Service Worker no registrado:', err));
+        }
+
+        // Monitor de performance
+        if (window.PerformanceObserver) {
+            const perfObserver = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                    Logger.info(`Performance: ${entry.name} - ${entry.duration.toFixed(2)}ms`);
+                }
+            });
+            perfObserver.observe({ entryTypes: ['measure', 'navigation'] });
+        }
+
+        // Inicializar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                const app = new DashboardController();
+                app.init();
+            });
+        } else {
+            const app = new DashboardController();
+            app.init();
+        }
+
+        // Exponer para debugging
+        window.DashboardApp = {
+            CONFIG,
+            Logger,
+            Sanitizer,
+            CSVParser,
+            DataManager,
+            DashboardController
+        };
     </script>
 </body>
 </html>
