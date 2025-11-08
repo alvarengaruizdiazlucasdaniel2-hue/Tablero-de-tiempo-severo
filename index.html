@@ -12,6 +12,9 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
 
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha256-sD8vfY8aUMmW8gJ7Ubw6L2Id5ZLk1Gf9zVQ9VVKQfT8=" crossorigin="anonymous">
+
     <style>
         :root {
             --primary-color: #004085;
@@ -103,6 +106,8 @@
             z-index: 10;
             border: none;
             padding: 0.75rem;
+            cursor: pointer;
+            user-select: none;
         }
 
         .table tbody td {
@@ -129,17 +134,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
         .empty-state {
             text-align: center;
             padding: 3rem;
@@ -160,6 +154,29 @@
             justify-content: space-between;
             align-items: center;
             padding: 1rem 0;
+        }
+
+        .marker-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 99, 132, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 99, 132, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 99, 132, 0); }
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            display: none;
         }
 
         @media (max-width: 768px) {
@@ -193,7 +210,9 @@
         <div id="errorState" class="error-state" style="display: none;">
             <h3><i class="bi bi-exclamation-triangle"></i> Error Crítico del Sistema</h3>
             <p id="errorMessage"></p>
+            <div id="errorDetails" style="background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.85rem;"></div>
             <button id="retryButton" class="btn btn-danger mt-2">Reintentar Carga</button>
+            <button id="debugButton" class="btn btn-warning mt-2 ms-2">Ver Diagnóstico</button>
         </div>
 
         <!-- Contenido Principal -->
@@ -295,24 +314,33 @@
         </div>
     </main>
 
+    <!-- Debug Info Panel -->
+    <div id="debugPanel" class="debug-info">
+        <strong>Debug Mode</strong><br>
+        URL: <span id="debugURL"></span><br>
+        Status: <span id="debugStatus"></span><br>
+        Data: <span id="debugDataCount"></span> items
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" integrity="sha256-oJ1QxtEaY9vZ0C6Z6CcGRfV5fM4hVhcNu1vGkL7QH3k=" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha256-sD8vfY8aUMmW8gJ7Ubw6L2Id5ZLk1Gf9zVQ9VVKQfT8=" crossorigin="anonymous">
 
     <script>
         // =============================================================================
         // CONFIGURACIÓN GLOBAL Y UTILIDADES
         // =============================================================================
         const CONFIG = {
-            GOOGLE_SHEETS_URL: 'https://docs.google.com/spreadsheets/d/1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s/edit?usp=sharing',
+            // ⚠️ IMPORTANTE: ASEGÚRATE DE USAR LA URL DE PUBLICACIÓN CSV
+            GOOGLE_SHEETS_URL: 'https://docs.google.com/spreadsheets/d/1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s/pub?output=csv',
             PAGE_SIZE: 50,
             MAP_CENTER: [-23.4425, -58.4438],
             MAP_ZOOM: 6,
             DEBOUNCE_DELAY: 300,
             MAX_RETRIES: 3,
-            RETRY_DELAY: 2000
+            RETRY_DELAY: 2000,
+            DEBUG_MODE: false // Cambia a true para ver info de debug
         };
 
         // Logger seguro
@@ -367,10 +395,11 @@
                             row[header] = values[index] || '';
                         });
                         
-                        // Validación básica de datos requeridos
                         if (this.isValidRow(row)) {
                             data.push(this.cleanRow(row));
                         }
+                    } else {
+                        Logger.warn(`Línea ${i+1} tiene ${values.length} columnas, se esperaban ${headers.length}`);
                     }
                 }
 
@@ -378,6 +407,7 @@
                     throw new Error('No se encontraron datos válidos en el CSV');
                 }
 
+                Logger.info(`CSV parseado: ${data.length} filas válidas`);
                 return data;
             },
 
@@ -409,22 +439,29 @@
             },
 
             isValidRow(row) {
-                return row['Departamento'] && row['Tipo de fenómeno (GRA/RAF/TOR)'] && row['Fecha (AAAAMMDD)'];
+                const hasDept = row['Departamento'] && row['Departamento'].trim().length > 0;
+                const hasFenomeno = row['Tipo de fenómeno (GRA/RAF/TOR)'] && row['Tipo de fenómeno (GRA/RAF/TOR)'].trim().length > 0;
+                const hasFecha = row['Fecha (AAAAMMDD)'] && /^\d{8}$/.test(row['Fecha (AAAAMMDD)'].trim());
+                
+                return hasDept && hasFenomeno && hasFecha;
             },
 
             cleanRow(row) {
                 // Convertir coordenadas
-                row['Latitud (grados, 4 dec.)'] = parseFloat(row['Latitud (grados, 4 dec.)']);
-                row['Longitud (grados, 4 dec.)'] = parseFloat(row['Longitud (grados, 4 dec.)']);
+                const lat = parseFloat(row['Latitud (grados, 4 dec.)']);
+                const lon = parseFloat(row['Longitud (grados, 4 dec.)']);
                 
-                // Validar coordenadas
-                if (isNaN(row['Latitud (grados, 4 dec.)']) || isNaN(row['Longitud (grados, 4 dec.)'])) {
+                // Validar coordenadas (Paraguay aprox: -27 a -19 lat, -63 a -54 lon)
+                if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                    row['Latitud (grados, 4 dec.)'] = lat;
+                    row['Longitud (grados, 4 dec.)'] = lon;
+                } else {
                     row['Latitud (grados, 4 dec.)'] = null;
                     row['Longitud (grados, 4 dec.)'] = null;
                 }
 
                 // Formatear fecha
-                const fechaStr = row['Fecha (AAAAMMDD)'];
+                const fechaStr = row['Fecha (AAAAMMDD)']?.trim();
                 if (/^\d{8}$/.test(fechaStr)) {
                     const year = fechaStr.substring(0, 4);
                     const month = fechaStr.substring(4, 6);
@@ -432,8 +469,16 @@
                     row['Fecha (AAAAMMDD)'] = `${year}-${month}-${day}`;
                     row['timestamp'] = new Date(`${year}-${month}-${day}T00:00:00`).getTime();
                 } else {
+                    Logger.warn(`Fecha inválida: ${fechaStr}`);
                     row['timestamp'] = 0;
                 }
+
+                // Limpiar campos de texto
+                Object.keys(row).forEach(key => {
+                    if (typeof row[key] === 'string') {
+                        row[key] = row[key].trim();
+                    }
+                });
 
                 return row;
             }
@@ -452,6 +497,40 @@
             };
         };
 
+        // Verificador de URL de Google Sheets
+        const GoogleSheetsValidator = {
+            isEditURL(url) {
+                return url.includes('/edit') || url.includes('usp=sharing');
+            },
+
+            convertToCSVURL(editURL) {
+                try {
+                    const match = editURL.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                    if (match) {
+                        const sheetId = match[1];
+                        return `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv`;
+                    }
+                    throw new Error('No se pudo extraer el ID de la hoja');
+                } catch (error) {
+                    Logger.error('Error convirtiendo URL:', error);
+                    throw new Error('URL de Google Sheets inválida. Debe ser del tipo: https://docs.google.com/spreadsheets/d/ID/edit');
+                }
+            },
+
+            async testURL(url) {
+                try {
+                    Logger.info('Probando URL:', url);
+                    const response = await fetch(url, { 
+                        method: 'HEAD', 
+                        signal: AbortSignal.timeout(5000) 
+                    });
+                    return response.ok;
+                } catch {
+                    return false;
+                }
+            }
+        };
+
         // =============================================================================
         // GESTORES DE COMPONENTES
         // =============================================================================
@@ -463,31 +542,72 @@
                 this.departamentos = new Set();
                 this.fenomenos = new Set();
                 this.cache = new Map();
+                this.url = CONFIG.GOOGLE_SHEETS_URL;
             }
 
             async loadData(retries = CONFIG.MAX_RETRIES) {
                 try {
+                    this.uiUpdateLoading('Verificando URL de Google Sheets...');
+                    
+                    // Validar URL
+                    if (GoogleSheetsValidator.isEditURL(this.url)) {
+                        throw new Error(`
+                            <strong>URL INCORRECTA</strong><br>
+                            Estás usando una URL de edición (<code>/edit</code>).<br><br>
+                            <strong>Instrucciones para corregir:</strong><br>
+                            1. Abre tu hoja de Google Sheets<br>
+                            2. Ve a <b>Archivo > Publicar en la web</b><br>
+                            3. Selecciona la hoja y CSV<br>
+                            4. Copia la URL generada y reemplázala en el código<br><br>
+                            <a href="https://support.google.com/docs/answer/37579" target="_blank" class="btn btn-sm btn-info">Ver guía oficial</a>
+                        `);
+                    }
+
+                    this.uiUpdateLoading('Cargando datos desde Google Sheets...');
+                    
+                    // Intentar cache primero
                     const cached = localStorage.getItem('weatherData');
                     const cacheTime = localStorage.getItem('weatherDataTime');
                     const now = Date.now();
 
-                    // Usar cache si tiene menos de 5 minutos
                     if (cached && cacheTime && (now - parseInt(cacheTime)) < 300000) {
                         Logger.info('Usando datos del cache');
                         this.rawData = JSON.parse(cached);
+                        this.uiUpdateLoading('Datos cargados desde cache...');
                     } else {
-                        Logger.info('Cargando datos desde Google Sheets');
-                        const response = await fetch(CONFIG.GOOGLE_SHEETS_URL, {
+                        Logger.info('Cargando datos desde:', this.url);
+                        
+                        const response = await fetch(this.url, {
                             method: 'GET',
                             headers: { 'Accept': 'text/csv' },
-                            signal: AbortSignal.timeout(10000) // Timeout de 10s
+                            signal: AbortSignal.timeout(15000) // Timeout de 15s
                         });
 
                         if (!response.ok) {
-                            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+                            if (response.status === 404) {
+                                throw new Error(`
+                                    <strong>Google Sheets no encontrado (404)</strong><br>
+                                    La hoja no está publicada o la URL es incorrecta.<br><br>
+                                    <strong>Instrucciones:</strong><br>
+                                    1. Abre tu hoja de Google Sheets<br>
+                                    2. Ve a <b>Archivo > Publicar en la web</b><br>
+                                    3. Selecciona: "Hoja completa" y "CSV"<br>
+                                    4. Haz clic en "Publicar"<br>
+                                    5. Copia la URL generada
+                                `);
+                            }
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                         }
 
                         const csvText = await response.text();
+                        
+                        if (!csvText || csvText.trim().length === 0) {
+                            throw new Error('El CSV está vacío. Verifica que la hoja contenga datos.');
+                        }
+
+                        Logger.info(`CSV recibido: ${csvText.substring(0, 100)}...`);
+                        this.uiUpdateLoading('Procesando datos...');
+                        
                         this.rawData = CSVParser.parse(csvText);
 
                         // Guardar en cache
@@ -496,18 +616,27 @@
                     }
 
                     this.extractMetadata();
+                    Logger.info(`Datos cargados: ${this.rawData.length} registros`);
                     return this.rawData;
+                    
                 } catch (error) {
                     Logger.error('Error al cargar datos:', error);
                     
-                    if (retries > 0 && error.name !== 'AbortError') {
-                        Logger.warn(`Reintentando... (${retries} restantes)`);
+                    // Si es error de timeout y hay retry
+                    if (error.name === 'AbortError' && retries > 0) {
+                        Logger.warn(`Timeout. Reintentando... (${retries} restantes)`);
+                        this.uiUpdateLoading(`Timeout. Reintentando (${retries})...`);
                         await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY));
                         return this.loadData(retries - 1);
                     }
                     
                     throw error;
                 }
+            }
+
+            uiUpdateLoading(message) {
+                const loadingEl = document.querySelector('#loadingState p');
+                if (loadingEl) loadingEl.textContent = message;
             }
 
             extractMetadata() {
@@ -518,6 +647,8 @@
                     if (row['Departamento']) this.departamentos.add(row['Departamento']);
                     if (row['Tipo de fenómeno (GRA/RAF/TOR)']) this.fenomenos.add(row['Tipo de fenómeno (GRA/RAF/TOR)']);
                 });
+
+                Logger.info(`Metadata: ${this.departamentos.size} dept, ${this.fenomenos.size} fenomenos`);
             }
 
             filterData(filters) {
@@ -530,14 +661,13 @@
                 this.filteredData = this.rawData.filter(item => {
                     const matchesDepartamento = !filters.departamento || item['Departamento'] === filters.departamento;
                     const matchesFenomeno = filters.fenomenos.length === 0 || filters.fenomenos.includes(item['Tipo de fenómeno (GRA/RAF/TOR)']);
-                    
-                    // Validar coordenadas para el mapa
                     const hasValidCoords = item['Latitud (grados, 4 dec.)'] && item['Longitud (grados, 4 dec.)'];
                     
                     return matchesDepartamento && matchesFenomeno && hasValidCoords;
                 });
 
                 this.cache.set(cacheKey, this.filteredData);
+                Logger.info(`Filtrados: ${this.filteredData.length} registros`);
                 return this.filteredData;
             }
 
@@ -565,7 +695,10 @@
                     error: document.getElementById('errorState'),
                     main: document.getElementById('mainContent'),
                     errorMessage: document.getElementById('errorMessage'),
-                    retryButton: document.getElementById('retryButton')
+                    errorDetails: document.getElementById('errorDetails'),
+                    retryButton: document.getElementById('retryButton'),
+                    debugButton: document.getElementById('debugButton'),
+                    debugPanel: document.getElementById('debugPanel')
                 };
             }
 
@@ -574,10 +707,17 @@
                 this.elements.loading.style.display = 'block';
             }
 
-            showError(message, retryCallback) {
+            showError(message, details = '', retryCallback = null) {
                 this.hideAll();
                 this.elements.error.style.display = 'block';
-                this.elements.errorMessage.textContent = message;
+                this.elements.errorMessage.innerHTML = message; // Usar innerHTML para HTML en error
+                
+                if (details) {
+                    this.elements.errorDetails.textContent = details;
+                    this.elements.errorDetails.style.display = 'block';
+                } else {
+                    this.elements.errorDetails.style.display = 'none';
+                }
                 
                 if (retryCallback) {
                     this.elements.retryButton.onclick = retryCallback;
@@ -585,6 +725,24 @@
                 } else {
                     this.elements.retryButton.style.display = 'none';
                 }
+
+                // Debug button
+                if (CONFIG.DEBUG_MODE) {
+                    this.elements.debugButton.style.display = 'inline-block';
+                    this.elements.debugButton.onclick = () => this.toggleDebug();
+                }
+            }
+
+            toggleDebug() {
+                const panel = this.elements.debugPanel;
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+
+            updateDebug(url, status, count) {
+                if (!CONFIG.DEBUG_MODE) return;
+                document.getElementById('debugURL').textContent = url;
+                document.getElementById('debugStatus').textContent = status;
+                document.getElementById('debugDataCount').textContent = count;
             }
 
             showMain() {
@@ -594,7 +752,9 @@
             }
 
             hideAll() {
-                Object.values(this.elements).forEach(el => el.style.display = 'none');
+                Object.values(this.elements).forEach(el => {
+                    if (el) el.style.display = 'none';
+                });
             }
 
             updateFilterStatus(total, filtered) {
@@ -605,16 +765,6 @@
                 } else {
                     status.style.display = 'none';
                 }
-            }
-
-            showEmptyState(containerId, message) {
-                const container = document.getElementById(containerId);
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                        <p class="mt-3">${Sanitizer.escapeHTML(message)}</p>
-                    </div>
-                `;
             }
         }
 
@@ -639,21 +789,12 @@
 
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '© OpenStreetMap contributors',
-                        maxZoom: 18,
-                        maxNativeZoom: 19
+                        maxZoom: 18
                     }).addTo(this.map);
 
                     this.markersLayer = L.layerGroup().addTo(this.map);
+                    Logger.info('Mapa inicializado');
                     
-                    // Controles adicionales
-                    this.map.on('popupopen', (e) => {
-                        e.popup._source._icon?.classList.add('marker-pulse');
-                    });
-
-                    this.map.on('popupclose', (e) => {
-                        e.popup._source._icon?.classList.remove('marker-pulse');
-                    });
-
                 } catch (error) {
                     Logger.error('Error inicializando mapa:', error);
                     throw error;
@@ -672,7 +813,7 @@
 
                 const bounds = [];
 
-                data.forEach(item => {
+                data.forEach((item, index) => {
                     const lat = item['Latitud (grados, 4 dec.)'];
                     const lon = item['Longitud (grados, 4 dec.)'];
                     
@@ -713,6 +854,9 @@
 
                 if (bounds.length > 0) {
                     this.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
+                    Logger.info(`Mapa: ${bounds.length} marcadores añadidos`);
+                } else {
+                    Logger.warn('Mapa: No se encontraron coordenadas válidas');
                 }
             }
 
@@ -783,7 +927,7 @@
                                             const label = context.label || '';
                                             const value = context.parsed || 0;
                                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = ((value / total) * 100).toFixed(1);
+                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                             return `${label}: ${value} (${percentage}%)`;
                                         }
                                     }
@@ -827,6 +971,8 @@
                         }
                     });
 
+                    Logger.info('Gráficos inicializados');
+
                 } catch (error) {
                     Logger.error('Error inicializando charts:', error);
                     throw error;
@@ -851,6 +997,8 @@
                     this.charts.departamento.data.labels = sortedDept.map(d => d[0]);
                     this.charts.departamento.data.datasets[0].data = sortedDept.map(d => d[1]);
                     this.charts.departamento.update('active');
+
+                    Logger.info('Gráficos actualizados');
 
                 } catch (error) {
                     Logger.error('Error actualizando charts:', error);
@@ -940,7 +1088,7 @@
                         <td>
                             ${item['Fuente'] && Sanitizer.isValidURL(item['Fuente']) ? 
                                 `<a href="${item['Fuente']}" target="_blank" rel="noopener noreferrer" 
-                                   class="btn btn-sm btn-outline-primary">
+                                   class="btn btn-sm btn-outline-primary" title="Abrir fuente">
                                    <i class="bi bi-box-arrow-up-right"></i>
                                 </a>` : 
                                 `<span class="text-muted"><i class="bi bi-dash"></i></span>`
@@ -1167,13 +1315,24 @@
                     this.updateDashboard(this.filterManager.filters);
                     
                     this.uiManager.showMain();
+                    Logger.info('Dashboard inicializado exitosamente');
                     
                 } catch (error) {
                     Logger.error('Error fatal en inicialización:', error);
+                    
+                    let details = '';
+                    if (error.message && error.message.length > 200) {
+                        details = error.message.substring(0, 200) + '...';
+                    }
+
                     this.uiManager.showError(
-                        `${error.message}. Si el problema persiste, verifica la conexión y la URL del Google Sheet.`,
+                        error.message || 'Error desconocido',
+                        details,
                         () => location.reload()
                     );
+
+                    // Actualizar debug info
+                    this.uiManager.updateDebug(CONFIG.GOOGLE_SHEETS_URL, 'ERROR', 0);
                 }
             }
 
@@ -1182,6 +1341,7 @@
                     this.mapManager = new MapManager('map');
                     this.chartManager = new ChartManager();
                     this.tableManager = new TableManager();
+                    Logger.info('Componentes UI inicializados');
                 } catch (error) {
                     Logger.error('Error inicializando componentes:', error);
                     throw new Error('No se pudieron inicializar los componentes visuales');
@@ -1196,6 +1356,8 @@
                     departamentos.map(dept => 
                         `<option value="${Sanitizer.escapeHTML(dept)}">${Sanitizer.escapeHTML(dept)}</option>`
                     ).join('');
+                
+                Logger.info(`Departamentos cargados: ${departamentos.length}`);
             }
 
             updateDashboard(filters) {
@@ -1214,6 +1376,9 @@
                     
                     // Actualizar estado de filtros
                     this.uiManager.updateFilterStatus(this.dataManager.rawData.length, filteredData.length);
+                    
+                    // Debug info
+                    this.uiManager.updateDebug(CONFIG.GOOGLE_SHEETS_URL, 'OK', filteredData.length);
 
                 } catch (error) {
                     Logger.error('Error actualizando dashboard:', error);
@@ -1223,15 +1388,15 @@
 
             updateKPIs(stats, filteredTotal) {
                 const container = document.getElementById('kpiContainer');
-                const totalEventos = filteredTotal;
-                const eventosValidos = this.dataManager.filteredData.length;
+                const totalEventos = this.dataManager.rawData.length;
+                const eventosValidos = filteredTotal;
                 const tasaExitos = totalEventos > 0 ? ((eventosValidos / totalEventos) * 100).toFixed(1) : 0;
 
                 container.innerHTML = `
                     <div class="col-md-3">
                         <div class="dashboard-card text-center">
                             <h3 class="text-primary">${eventosValidos}</h3>
-                            <p class="mb-0 text-muted">Eventos Validos</p>
+                            <p class="mb-0 text-muted">Eventos en Mapa</p>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -1266,16 +1431,6 @@
                 .catch(err => Logger.warn('Service Worker no registrado:', err));
         }
 
-        // Monitor de performance
-        if (window.PerformanceObserver) {
-            const perfObserver = new PerformanceObserver((list) => {
-                for (const entry of list.getEntries()) {
-                    Logger.info(`Performance: ${entry.name} - ${entry.duration.toFixed(2)}ms`);
-                }
-            });
-            perfObserver.observe({ entryTypes: ['measure', 'navigation'] });
-        }
-
         // Inicializar cuando el DOM esté listo
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
@@ -1296,6 +1451,12 @@
             DataManager,
             DashboardController
         };
+
+        // Debug info en consola
+        Logger.info('=== INFORMACIÓN DE DEBUG ===');
+        Logger.info('URL Configurada:', CONFIG.GOOGLE_SHEETS_URL);
+        Logger.info('Debug Mode:', CONFIG.DEBUG_MODE);
+        Logger.info('Para ver errores detallados, abre la consola (F12)');
     </script>
 </body>
 </html>
