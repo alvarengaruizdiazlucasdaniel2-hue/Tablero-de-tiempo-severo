@@ -1,0 +1,9 @@
+{
+  "name": "Tablero Meteorológico Severo - Paraguay",
+  "short_name": "MeteoSeveroPY",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#004085",
+  "icons": []
+}
