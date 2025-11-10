@@ -3,240 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*.openstreetmap.org;">
     <title>Tablero Meteorológico Severo | Paraguay</title>
 
+    <!-- Content Security Policy compatible con GitHub Pages y recursos usados -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self' https:;
+                   script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com;
+                   style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com;
+                   img-src 'self' data: https://*.openstreetmap.org;
+                   connect-src 'self' https://docs.google.com https://www.googleapis.com https:;">
+
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+          crossorigin="anonymous">
+
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="anonymous">
 
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha256-sD8vfY8aUMmW8gJ7Ubw6L2Id5ZLk1Gf9zVQ9VVKQfT8=" crossorigin="anonymous">
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <style>
-        :root {
-            --primary-color: #004085;
-            --secondary-color: #6c757d;
-            --accent-color: #007bff;
-            --danger-color: #dc3545;
-            --bg-color: #f8f9fa;
-            --card-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="css/styles.css">
 
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .dashboard-header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 1.5rem 0;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .dashboard-card {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .dashboard-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--bg-color);
-        }
-
-        #map {
-            height: 500px;
-            width: 100%;
-            border-radius: 8px;
-            background-color: #e0e0e0;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-
-        .filter-section {
-            background-color: #e9ecef;
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-            border: 1px solid #dee2e6;
-        }
-
-        .data-table-container {
-            max-height: 500px;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        .table {
-            margin-bottom: 0;
-        }
-
-        .table thead th {
-            position: sticky;
-            top: 0;
-            background-color: var(--primary-color);
-            color: white;
-            z-index: 10;
-            border: none;
-            padding: 0.75rem;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .table tbody td {
-            padding: 0.75rem;
-            vertical-align: middle;
-        }
-
-        .badge {
-            font-size: 0.875rem;
-            padding: 0.5em 0.75em;
-        }
-
-        .spinner-border {
-            width: 4rem;
-            height: 4rem;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--secondary-color);
-        }
-
-        .error-state {
-            padding: 2rem;
-            border-left: 4px solid var(--danger-color);
-            background-color: #f8d7da;
-            color: #721c24;
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
-
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 0;
-        }
-
-        .marker-pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 99, 132, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 99, 132, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 99, 132, 0); }
-        }
-
-        .debug-info {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 0.8rem;
-            z-index: 1000;
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            #map {
-                height: 300px;
-            }
-            
-            .filter-section .row > div {
-                margin-bottom: 1rem;
-            }
-        }
-    </style>
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#004085">
 </head>
 <body>
-
     <header class="dashboard-header">
         <div class="container">
             <h1 class="h3 mb-1">Tablero de Fenómenos Meteorológicos Severos</h1>
-            <p class="mb-0">Sistema de Monitoreo de Eventos Meteorológicos Críticos - Paraguay</p>
+            <p class="mb-0">
+                Sistema de monitoreo de reportes de granizo, ráfagas y tornados en Paraguay,
+                basado en la base colaborativa de eventos severos.
+            </p>
         </div>
     </header>
 
     <main class="container flex-grow-1">
-        <!-- Estado de Carga -->
+
+        <!-- Estado de carga -->
         <div id="loadingState" class="text-center py-5">
             <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
             <p class="mt-3 text-muted">Inicializando sistema de monitoreo...</p>
         </div>
 
-        <!-- Estado de Error -->
-        <div id="errorState" class="error-state" style="display: none;">
-            <h3><i class="bi bi-exclamation-triangle"></i> Error Crítico del Sistema</h3>
+        <!-- Estado de error -->
+        <div id="errorState" class="error-state" style="display:none;">
+            <h3><i class="bi bi-exclamation-triangle"></i> Error al cargar la información</h3>
             <p id="errorMessage"></p>
-            <div id="errorDetails" style="background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.85rem;"></div>
-            <button id="retryButton" class="btn btn-danger mt-2">Reintentar Carga</button>
-            <button id="debugButton" class="btn btn-warning mt-2 ms-2">Ver Diagnóstico</button>
+            <div id="errorDetails" style="display:none;"></div>
+            <button id="retryButton" class="btn btn-danger btn-sm mt-2">Reintentar</button>
+            <button id="debugButton" class="btn btn-warning btn-sm mt-2 ms-2" style="display:none;">
+                Ver diagnóstico
+            </button>
         </div>
 
-        <!-- Contenido Principal -->
-        <div id="mainContent" style="display: none;">
-            <!-- Sección de Filtros -->
+        <!-- Contenido principal -->
+        <div id="mainContent" style="display:none;">
+
+            <!-- Panel de filtros -->
             <section class="filter-section" aria-label="Filtros de datos">
-                <h5 class="mb-3"><i class="bi bi-funnel"></i> Panel de Filtros</h5>
+                <h5 class="mb-3">
+                    <i class="bi bi-funnel"></i> Panel de filtros
+                </h5>
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label for="departamentoFilter" class="form-label fw-semibold">Departamento:</label>
-                        <select id="departamentoFilter" class="form-select form-select-lg" aria-label="Filtrar por departamento">
+                        <label for="departamentoFilter" class="form-label fw-semibold">Departamento</label>
+                        <select id="departamentoFilter"
+                                class="form-select form-select-sm"
+                                aria-label="Filtrar por departamento">
                             <option value="">Todos los Departamentos</option>
                         </select>
                     </div>
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold">Tipo de Fenómeno:</label>
-                        <div id="fenomenoFilter" class="d-flex flex-wrap gap-3" role="group" aria-label="Filtros de fenómeno">
+                        <label class="form-label fw-semibold">Tipo de fenómeno</label>
+                        <div id="fenomenoFilter"
+                             class="d-flex flex-wrap gap-3"
+                             role="group"
+                             aria-label="Filtros de fenómeno">
                             <!-- Generado dinámicamente -->
                         </div>
                     </div>
                 </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <button id="clearFilters" class="btn btn-sm btn-outline-secondary">Limpiar Filtros</button>
+                <div class="row mt-3 align-items-center">
+                    <div class="col-auto">
+                        <button id="clearFilters" class="btn btn-outline-secondary btn-sm">
+                            Limpiar filtros
+                        </button>
+                    </div>
+                    <div class="col">
                         <span id="filterStatus" class="ms-3 text-muted"></span>
                     </div>
                 </div>
@@ -247,66 +110,94 @@
                 <!-- Generado dinámicamente -->
             </div>
 
-            <!-- Visualization Grid -->
+            <!-- Grid de visualización -->
             <div class="row g-4">
                 <!-- Mapa -->
                 <div class="col-lg-8">
                     <div class="dashboard-card fade-in">
-                        <h2 class="card-title"><i class="bi bi-map"></i> Mapa de Eventos Geolocalizados</h2>
-                        <div id="map" aria-label="Mapa interactivo de eventos meteorológicos"></div>
+                        <h2 class="card-title">
+                            <i class="bi bi-map"></i> Mapa de eventos geolocalizados
+                        </h2>
+                        <div id="map" aria-label="Mapa interactivo de eventos severos"></div>
                     </div>
                 </div>
-                
+
                 <!-- Gráficos -->
                 <div class="col-lg-4">
                     <div class="dashboard-card fade-in">
-                        <h2 class="card-title"><i class="bi bi-pie-chart"></i> Distribución por Fenómeno</h2>
+                        <h2 class="card-title">
+                            <i class="bi bi-pie-chart"></i> Distribución por tipo de fenómeno
+                        </h2>
                         <div class="chart-container">
-                            <canvas id="fenomenoChart" aria-label="Gráfico circular de distribución de fenómenos"></canvas>
+                            <canvas id="fenomenoChart"
+                                    aria-label="Distribución de eventos por tipo"></canvas>
                         </div>
                     </div>
                     <div class="dashboard-card fade-in">
-                        <h2 class="card-title"><i class="bi bi-bar-chart"></i> Top 10 Departamentos</h2>
+                        <h2 class="card-title">
+                            <i class="bi bi-bar-chart"></i> Top 10 departamentos con reportes
+                        </h2>
                         <div class="chart-container">
-                            <canvas id="departamentoChart" aria-label="Gráfico de barras de eventos por departamento"></canvas>
+                            <canvas id="departamentoChart"
+                                    aria-label="Eventos por departamento"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabla de Datos -->
+            <!-- Tabla de datos -->
             <section class="dashboard-card fade-in mt-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="card-title mb-0"><i class="bi bi-table"></i> Registros Detallados</h2>
+                    <h2 class="card-title mb-0">
+                        <i class="bi bi-table"></i> Registros detallados
+                    </h2>
                     <div>
-                        <button id="exportCSV" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-download"></i> Exportar CSV
+                        <button id="exportCSV" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-download"></i> Exportar CSV filtrado
                         </button>
                     </div>
                 </div>
+
                 <div class="data-table-container">
-                    <table id="dataTable" class="table table-hover" aria-label="Tabla detallada de eventos">
+                    <table id="dataTable"
+                           class="table table-hover table-sm align-middle"
+                           aria-label="Tabla de eventos meteorológicos severos">
                         <thead>
                             <tr>
-                                <th scope="col" data-sort="fecha">Fecha <i class="bi bi-arrow-down-up"></i></th>
-                                <th scope="col" data-sort="localidad">Localidad <i class="bi bi-arrow-down-up"></i></th>
-                                <th scope="col" data-sort="departamento">Departamento <i class="bi bi-arrow-down-up"></i></th>
-                                <th scope="col" data-sort="fenomeno">Fenómeno <i class="bi bi-arrow-down-up"></i></th>
-                                <th scope="col">Intensidad</th>
-                                <th scope="col">Descripción</th>
-                                <th scope="col">Fuente</th>
+                                <th scope="col" data-sort="fecha">
+                                    Fecha <i class="bi bi-arrow-down-up"></i>
+                                </th>
+                                <th scope="col" data-sort="Localidad">
+                                    Localidad <i class="bi bi-arrow-down-up"></i>
+                                </th>
+                                <th scope="col" data-sort="Departamento">
+                                    Departamento <i class="bi bi-arrow-down-up"></i>
+                                </th>
+                                <th scope="col" data-sort="Tipo de fenómeno (GRA/RAF/TOR)">
+                                    Fenómeno <i class="bi bi-arrow-down-up"></i>
+                                </th>
+                                <th scope="col" data-sort="Intensidad / Tamaño / Escala">
+                                    Intensidad
+                                </th>
+                                <th scope="col" data-sort="Descripción / Información adicional">
+                                    Descripción
+                                </th>
+                                <th scope="col" data-sort="Fuente">
+                                    Fuente
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
-                            <!-- Dinámico -->
+                            <!-- Generado dinámicamente -->
                         </tbody>
                     </table>
                 </div>
+
                 <div class="pagination-container">
                     <div id="paginationInfo" class="text-muted"></div>
-                    <nav aria-label="Paginación de datos">
+                    <nav aria-label="Paginación">
                         <ul id="paginationControls" class="pagination pagination-sm mb-0">
-                            <!-- Dinámico -->
+                            <!-- Generado dinámicamente -->
                         </ul>
                     </nav>
                 </div>
@@ -314,1149 +205,27 @@
         </div>
     </main>
 
-    <!-- Debug Info Panel -->
+    <!-- Panel debug (opcional) -->
     <div id="debugPanel" class="debug-info">
-        <strong>Debug Mode</strong><br>
+        <strong>Debug</strong><br>
         URL: <span id="debugURL"></span><br>
-        Status: <span id="debugStatus"></span><br>
-        Data: <span id="debugDataCount"></span> items
+        Estado: <span id="debugStatus"></span><br>
+        Registros: <span id="debugDataCount"></span>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" integrity="sha256-oJ1QxtEaY9vZ0C6Z6CcGRfV5fM4hVhcNu1vGkL7QH3k=" crossorigin="anonymous"></script>
-
-    <script>
-        // =============================================================================
-        // CONFIGURACIÓN GLOBAL Y UTILIDADES
-        // =============================================================================
-        const CONFIG = {
-            // ⚠️ IMPORTANTE: ASEGÚRATE DE USAR LA URL DE PUBLICACIÓN CSV
-            GOOGLE_SHEETS_URL: 'https://docs.google.com/spreadsheets/d/1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s/pub?output=csv',
-            PAGE_SIZE: 50,
-            MAP_CENTER: [-23.4425, -58.4438],
-            MAP_ZOOM: 6,
-            DEBOUNCE_DELAY: 300,
-            MAX_RETRIES: 3,
-            RETRY_DELAY: 2000,
-            DEBUG_MODE: false // Cambia a true para ver info de debug
-        };
-
-        // Logger seguro
-        const Logger = {
-            info: (...args) => console.log('[INFO]', ...args),
-            error: (...args) => console.error('[ERROR]', ...args),
-            warn: (...args) => console.warn('[WARN]', ...args)
-        };
-
-        // Sanitizador de HTML para prevenir XSS
-        const Sanitizer = {
-            escapeHTML(str) {
-                if (typeof str !== 'string') return '';
-                const div = document.createElement('div');
-                div.textContent = str;
-                return div.innerHTML;
-            },
-            isValidURL(url) {
-                try {
-                    const parsed = new URL(url);
-                    return ['http:', 'https:'].includes(parsed.protocol);
-                } catch {
-                    return false;
-                }
-            },
-            sanitizeText(text, maxLength = 500) {
-                const escaped = this.escapeHTML(text || '');
-                return escaped.length > maxLength ? escaped.substring(0, maxLength) + '...' : escaped;
-            }
-        };
-
-        // Parser CSV robusto
-        const CSVParser = {
-            parse(csvText) {
-                if (!csvText || typeof csvText !== 'string') {
-                    throw new Error('CSV inválido o vacío');
-                }
-
-                const lines = csvText.split(/\r?\n/).filter(line => line.trim());
-                if (lines.length < 2) {
-                    throw new Error('CSV no tiene suficientes filas');
-                }
-
-                const headers = this.parseLine(lines[0]);
-                const data = [];
-
-                for (let i = 1; i < lines.length; i++) {
-                    const values = this.parseLine(lines[i]);
-                    if (values.length === headers.length) {
-                        const row = {};
-                        headers.forEach((header, index) => {
-                            row[header] = values[index] || '';
-                        });
-                        
-                        if (this.isValidRow(row)) {
-                            data.push(this.cleanRow(row));
-                        }
-                    } else {
-                        Logger.warn(`Línea ${i+1} tiene ${values.length} columnas, se esperaban ${headers.length}`);
-                    }
-                }
-
-                if (data.length === 0) {
-                    throw new Error('No se encontraron datos válidos en el CSV');
-                }
-
-                Logger.info(`CSV parseado: ${data.length} filas válidas`);
-                return data;
-            },
-
-            parseLine(line) {
-                const result = [];
-                let current = '';
-                let inQuotes = false;
-                
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    const nextChar = line[i + 1];
-
-                    if (char === '"') {
-                        if (inQuotes && nextChar === '"') {
-                            current += '"';
-                            i++;
-                        } else {
-                            inQuotes = !inQuotes;
-                        }
-                    } else if (char === ',' && !inQuotes) {
-                        result.push(current.trim());
-                        current = '';
-                    } else {
-                        current += char;
-                    }
-                }
-                result.push(current.trim());
-                return result.map(v => v.replace(/^"|"$/g, ''));
-            },
-
-            isValidRow(row) {
-                const hasDept = row['Departamento'] && row['Departamento'].trim().length > 0;
-                const hasFenomeno = row['Tipo de fenómeno (GRA/RAF/TOR)'] && row['Tipo de fenómeno (GRA/RAF/TOR)'].trim().length > 0;
-                const hasFecha = row['Fecha (AAAAMMDD)'] && /^\d{8}$/.test(row['Fecha (AAAAMMDD)'].trim());
-                
-                return hasDept && hasFenomeno && hasFecha;
-            },
-
-            cleanRow(row) {
-                // Convertir coordenadas
-                const lat = parseFloat(row['Latitud (grados, 4 dec.)']);
-                const lon = parseFloat(row['Longitud (grados, 4 dec.)']);
-                
-                // Validar coordenadas (Paraguay aprox: -27 a -19 lat, -63 a -54 lon)
-                if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-                    row['Latitud (grados, 4 dec.)'] = lat;
-                    row['Longitud (grados, 4 dec.)'] = lon;
-                } else {
-                    row['Latitud (grados, 4 dec.)'] = null;
-                    row['Longitud (grados, 4 dec.)'] = null;
-                }
-
-                // Formatear fecha
-                const fechaStr = row['Fecha (AAAAMMDD)']?.trim();
-                if (/^\d{8}$/.test(fechaStr)) {
-                    const year = fechaStr.substring(0, 4);
-                    const month = fechaStr.substring(4, 6);
-                    const day = fechaStr.substring(6, 8);
-                    row['Fecha (AAAAMMDD)'] = `${year}-${month}-${day}`;
-                    row['timestamp'] = new Date(`${year}-${month}-${day}T00:00:00`).getTime();
-                } else {
-                    Logger.warn(`Fecha inválida: ${fechaStr}`);
-                    row['timestamp'] = 0;
-                }
-
-                // Limpiar campos de texto
-                Object.keys(row).forEach(key => {
-                    if (typeof row[key] === 'string') {
-                        row[key] = row[key].trim();
-                    }
-                });
-
-                return row;
-            }
-        };
-
-        // Debounce utility
-        const debounce = (func, wait) => {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        };
-
-        // Verificador de URL de Google Sheets
-        const GoogleSheetsValidator = {
-            isEditURL(url) {
-                return url.includes('/edit') || url.includes('usp=sharing');
-            },
-
-            convertToCSVURL(editURL) {
-                try {
-                    const match = editURL.match(/\/d\/([a-zA-Z0-9-_]+)/);
-                    if (match) {
-                        const sheetId = match[1];
-                        return `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv`;
-                    }
-                    throw new Error('No se pudo extraer el ID de la hoja');
-                } catch (error) {
-                    Logger.error('Error convirtiendo URL:', error);
-                    throw new Error('URL de Google Sheets inválida. Debe ser del tipo: https://docs.google.com/spreadsheets/d/ID/edit');
-                }
-            },
-
-            async testURL(url) {
-                try {
-                    Logger.info('Probando URL:', url);
-                    const response = await fetch(url, { 
-                        method: 'HEAD', 
-                        signal: AbortSignal.timeout(5000) 
-                    });
-                    return response.ok;
-                } catch {
-                    return false;
-                }
-            }
-        };
-
-        // =============================================================================
-        // GESTORES DE COMPONENTES
-        // =============================================================================
-
-        class DataManager {
-            constructor() {
-                this.rawData = [];
-                this.filteredData = [];
-                this.departamentos = new Set();
-                this.fenomenos = new Set();
-                this.cache = new Map();
-                this.url = CONFIG.GOOGLE_SHEETS_URL;
-            }
-
-            async loadData(retries = CONFIG.MAX_RETRIES) {
-                try {
-                    this.uiUpdateLoading('Verificando URL de Google Sheets...');
-                    
-                    // Validar URL
-                    if (GoogleSheetsValidator.isEditURL(this.url)) {
-                        throw new Error(`
-                            <strong>URL INCORRECTA</strong><br>
-                            Estás usando una URL de edición (<code>/edit</code>).<br><br>
-                            <strong>Instrucciones para corregir:</strong><br>
-                            1. Abre tu hoja de Google Sheets<br>
-                            2. Ve a <b>Archivo > Publicar en la web</b><br>
-                            3. Selecciona la hoja y CSV<br>
-                            4. Copia la URL generada y reemplázala en el código<br><br>
-                            <a href="https://support.google.com/docs/answer/37579" target="_blank" class="btn btn-sm btn-info">Ver guía oficial</a>
-                        `);
-                    }
-
-                    this.uiUpdateLoading('Cargando datos desde Google Sheets...');
-                    
-                    // Intentar cache primero
-                    const cached = localStorage.getItem('weatherData');
-                    const cacheTime = localStorage.getItem('weatherDataTime');
-                    const now = Date.now();
-
-                    if (cached && cacheTime && (now - parseInt(cacheTime)) < 300000) {
-                        Logger.info('Usando datos del cache');
-                        this.rawData = JSON.parse(cached);
-                        this.uiUpdateLoading('Datos cargados desde cache...');
-                    } else {
-                        Logger.info('Cargando datos desde:', this.url);
-                        
-                        const response = await fetch(this.url, {
-                            method: 'GET',
-                            headers: { 'Accept': 'text/csv' },
-                            signal: AbortSignal.timeout(15000) // Timeout de 15s
-                        });
-
-                        if (!response.ok) {
-                            if (response.status === 404) {
-                                throw new Error(`
-                                    <strong>Google Sheets no encontrado (404)</strong><br>
-                                    La hoja no está publicada o la URL es incorrecta.<br><br>
-                                    <strong>Instrucciones:</strong><br>
-                                    1. Abre tu hoja de Google Sheets<br>
-                                    2. Ve a <b>Archivo > Publicar en la web</b><br>
-                                    3. Selecciona: "Hoja completa" y "CSV"<br>
-                                    4. Haz clic en "Publicar"<br>
-                                    5. Copia la URL generada
-                                `);
-                            }
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-
-                        const csvText = await response.text();
-                        
-                        if (!csvText || csvText.trim().length === 0) {
-                            throw new Error('El CSV está vacío. Verifica que la hoja contenga datos.');
-                        }
-
-                        Logger.info(`CSV recibido: ${csvText.substring(0, 100)}...`);
-                        this.uiUpdateLoading('Procesando datos...');
-                        
-                        this.rawData = CSVParser.parse(csvText);
-
-                        // Guardar en cache
-                        localStorage.setItem('weatherData', JSON.stringify(this.rawData));
-                        localStorage.setItem('weatherDataTime', now.toString());
-                    }
-
-                    this.extractMetadata();
-                    Logger.info(`Datos cargados: ${this.rawData.length} registros`);
-                    return this.rawData;
-                    
-                } catch (error) {
-                    Logger.error('Error al cargar datos:', error);
-                    
-                    // Si es error de timeout y hay retry
-                    if (error.name === 'AbortError' && retries > 0) {
-                        Logger.warn(`Timeout. Reintentando... (${retries} restantes)`);
-                        this.uiUpdateLoading(`Timeout. Reintentando (${retries})...`);
-                        await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY));
-                        return this.loadData(retries - 1);
-                    }
-                    
-                    throw error;
-                }
-            }
-
-            uiUpdateLoading(message) {
-                const loadingEl = document.querySelector('#loadingState p');
-                if (loadingEl) loadingEl.textContent = message;
-            }
-
-            extractMetadata() {
-                this.departamentos.clear();
-                this.fenomenos.clear();
-                
-                this.rawData.forEach(row => {
-                    if (row['Departamento']) this.departamentos.add(row['Departamento']);
-                    if (row['Tipo de fenómeno (GRA/RAF/TOR)']) this.fenomenos.add(row['Tipo de fenómeno (GRA/RAF/TOR)']);
-                });
-
-                Logger.info(`Metadata: ${this.departamentos.size} dept, ${this.fenomenos.size} fenomenos`);
-            }
-
-            filterData(filters) {
-                const cacheKey = JSON.stringify(filters);
-                if (this.cache.has(cacheKey)) {
-                    this.filteredData = this.cache.get(cacheKey);
-                    return this.filteredData;
-                }
-
-                this.filteredData = this.rawData.filter(item => {
-                    const matchesDepartamento = !filters.departamento || item['Departamento'] === filters.departamento;
-                    const matchesFenomeno = filters.fenomenos.length === 0 || filters.fenomenos.includes(item['Tipo de fenómeno (GRA/RAF/TOR)']);
-                    const hasValidCoords = item['Latitud (grados, 4 dec.)'] && item['Longitud (grados, 4 dec.)'];
-                    
-                    return matchesDepartamento && matchesFenomeno && hasValidCoords;
-                });
-
-                this.cache.set(cacheKey, this.filteredData);
-                Logger.info(`Filtrados: ${this.filteredData.length} registros`);
-                return this.filteredData;
-            }
-
-            getStats() {
-                return {
-                    total: this.filteredData.length,
-                    byFenomeno: this.countBy('Tipo de fenómeno (GRA/RAF/TOR)'),
-                    byDepartamento: this.countBy('Departamento')
-                };
-            }
-
-            countBy(key) {
-                return this.filteredData.reduce((acc, item) => {
-                    const val = item[key] || 'Desconocido';
-                    acc[val] = (acc[val] || 0) + 1;
-                    return acc;
-                }, {});
-            }
-        }
-
-        class UIManager {
-            constructor() {
-                this.elements = {
-                    loading: document.getElementById('loadingState'),
-                    error: document.getElementById('errorState'),
-                    main: document.getElementById('mainContent'),
-                    errorMessage: document.getElementById('errorMessage'),
-                    errorDetails: document.getElementById('errorDetails'),
-                    retryButton: document.getElementById('retryButton'),
-                    debugButton: document.getElementById('debugButton'),
-                    debugPanel: document.getElementById('debugPanel')
-                };
-            }
-
-            showLoading() {
-                this.hideAll();
-                this.elements.loading.style.display = 'block';
-            }
-
-            showError(message, details = '', retryCallback = null) {
-                this.hideAll();
-                this.elements.error.style.display = 'block';
-                this.elements.errorMessage.innerHTML = message; // Usar innerHTML para HTML en error
-                
-                if (details) {
-                    this.elements.errorDetails.textContent = details;
-                    this.elements.errorDetails.style.display = 'block';
-                } else {
-                    this.elements.errorDetails.style.display = 'none';
-                }
-                
-                if (retryCallback) {
-                    this.elements.retryButton.onclick = retryCallback;
-                    this.elements.retryButton.style.display = 'inline-block';
-                } else {
-                    this.elements.retryButton.style.display = 'none';
-                }
-
-                // Debug button
-                if (CONFIG.DEBUG_MODE) {
-                    this.elements.debugButton.style.display = 'inline-block';
-                    this.elements.debugButton.onclick = () => this.toggleDebug();
-                }
-            }
-
-            toggleDebug() {
-                const panel = this.elements.debugPanel;
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-            }
-
-            updateDebug(url, status, count) {
-                if (!CONFIG.DEBUG_MODE) return;
-                document.getElementById('debugURL').textContent = url;
-                document.getElementById('debugStatus').textContent = status;
-                document.getElementById('debugDataCount').textContent = count;
-            }
-
-            showMain() {
-                this.hideAll();
-                this.elements.main.style.display = 'block';
-                this.elements.main.classList.add('fade-in');
-            }
-
-            hideAll() {
-                Object.values(this.elements).forEach(el => {
-                    if (el) el.style.display = 'none';
-                });
-            }
-
-            updateFilterStatus(total, filtered) {
-                const status = document.getElementById('filterStatus');
-                if (total !== filtered) {
-                    status.textContent = `Mostrando ${filtered} de ${total} registros`;
-                    status.style.display = 'inline';
-                } else {
-                    status.style.display = 'none';
-                }
-            }
-        }
-
-        class MapManager {
-            constructor(mapElementId) {
-                this.mapElement = document.getElementById(mapElementId);
-                this.map = null;
-                this.markersLayer = null;
-                this.init();
-            }
-
-            init() {
-                try {
-                    if (!this.mapElement) throw new Error('Elemento del mapa no encontrado');
-                    
-                    this.map = L.map(this.mapElement, {
-                        center: CONFIG.MAP_CENTER,
-                        zoom: CONFIG.MAP_ZOOM,
-                        zoomControl: true,
-                        attributionControl: true
-                    });
-
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors',
-                        maxZoom: 18
-                    }).addTo(this.map);
-
-                    this.markersLayer = L.layerGroup().addTo(this.map);
-                    Logger.info('Mapa inicializado');
-                    
-                } catch (error) {
-                    Logger.error('Error inicializando mapa:', error);
-                    throw error;
-                }
-            }
-
-            update(data) {
-                if (!this.map || !this.markersLayer) return;
-
-                this.markersLayer.clearLayers();
-
-                if (data.length === 0) {
-                    this.map.setView(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM);
-                    return;
-                }
-
-                const bounds = [];
-
-                data.forEach((item, index) => {
-                    const lat = item['Latitud (grados, 4 dec.)'];
-                    const lon = item['Longitud (grados, 4 dec.)'];
-                    
-                    if (lat && lon && this.isValidCoordinate(lat, lon)) {
-                        bounds.push([lat, lon]);
-
-                        const color = this.getMarkerColor(item['Tipo de fenómeno (GRA/RAF/TOR)']);
-                        const icon = this.createCustomIcon(color);
-
-                        const popupContent = `
-                            <div class="popup-content" style="min-width: 250px;">
-                                <h6 style="color: var(--primary-color); margin-bottom: 0.5rem;">
-                                    ${Sanitizer.sanitizeText(item['Localidad'])}
-                                </h6>
-                                <div style="font-size: 0.9rem;">
-                                    <strong>Departamento:</strong> ${Sanitizer.sanitizeText(item['Departamento'])}<br>
-                                    <strong>Fenómeno:</strong> <span class="badge" style="background: ${color}">
-                                        ${Sanitizer.sanitizeText(item['Tipo de fenómeno (GRA/RAF/TOR)'])}
-                                    </span><br>
-                                    <strong>Fecha:</strong> ${Sanitizer.sanitizeText(item['Fecha (AAAAMMDD)'])}<br>
-                                    <strong>Intensidad:</strong> ${Sanitizer.sanitizeText(item['Intensidad / Tamaño / Escala'])}<br>
-                                    <hr style="margin: 0.5rem 0;">
-                                    <p style="margin: 0; font-size: 0.85rem;">
-                                        ${Sanitizer.sanitizeText(item['Descripción / Información adicional'], 200)}
-                                    </p>
-                                    ${item['Fuente'] && Sanitizer.isValidURL(item['Fuente']) ? 
-                                        `<a href="${item['Fuente']}" target="_blank" rel="noopener noreferrer" 
-                                           style="font-size: 0.85rem;">📎 Ver fuente</a>` : ''}
-                                </div>
-                            </div>
-                        `;
-
-                        L.marker([lat, lon], { icon })
-                            .bindPopup(popupContent, { maxWidth: 300 })
-                            .addTo(this.markersLayer);
-                    }
-                });
-
-                if (bounds.length > 0) {
-                    this.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
-                    Logger.info(`Mapa: ${bounds.length} marcadores añadidos`);
-                } else {
-                    Logger.warn('Mapa: No se encontraron coordenadas válidas');
-                }
-            }
-
-            isValidCoordinate(lat, lon) {
-                return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
-            }
-
-            getMarkerColor(fenomeno) {
-                const colors = {
-                    'GRA': '#FF6384',
-                    'RAF': '#36A2EB',
-                    'TOR': '#FFCE56'
-                };
-                return colors[fenomeno] || '#6c757d';
-            }
-
-            createCustomIcon(color) {
-                return L.divIcon({
-                    html: `<div style="
-                        background: ${color}; 
-                        width: 12px; 
-                        height: 12px; 
-                        border-radius: 50%;
-                        border: 2px solid white;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                    "></div>`,
-                    className: 'custom-marker',
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
-                });
-            }
-        }
-
-        class ChartManager {
-            constructor() {
-                this.charts = {};
-                this.init();
-            }
-
-            init() {
-                try {
-                    // Chart de fenómenos
-                    const fenomenoCtx = document.getElementById('fenomenoChart');
-                    if (!fenomenoCtx) throw new Error('Canvas de fenómeno no encontrado');
-
-                    this.charts.fenomeno = new Chart(fenomenoCtx.getContext('2d'), {
-                        type: 'doughnut',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                data: [],
-                                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
-                                borderWidth: 2,
-                                borderColor: '#fff'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { 
-                                    position: 'bottom',
-                                    labels: { padding: 15, usePointStyle: true }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: (context) => {
-                                            const label = context.label || '';
-                                            const value = context.parsed || 0;
-                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                            return `${label}: ${value} (${percentage}%)`;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-
-                    // Chart de departamentos
-                    const departamentoCtx = document.getElementById('departamentoChart');
-                    if (!departamentoCtx) throw new Error('Canvas de departamento no encontrado');
-
-                    this.charts.departamento = new Chart(departamentoCtx.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'Número de Eventos',
-                                data: [],
-                                backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                                borderColor: 'rgba(54, 162, 235, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: { 
-                                    beginAtZero: true, 
-                                    ticks: { stepSize: 1 },
-                                    grid: { color: 'rgba(0,0,0,0.1)' }
-                                },
-                                x: {
-                                    grid: { display: false }
-                                }
-                            },
-                            plugins: {
-                                legend: { display: false }
-                            }
-                        }
-                    });
-
-                    Logger.info('Gráficos inicializados');
-
-                } catch (error) {
-                    Logger.error('Error inicializando charts:', error);
-                    throw error;
-                }
-            }
-
-            update(data, stats) {
-                try {
-                    // Actualizar gráfico de fenómenos
-                    const fenomenoLabels = Object.keys(stats.byFenomeno);
-                    const fenomenoData = Object.values(stats.byFenomeno);
-                    
-                    this.charts.fenomeno.data.labels = fenomenoLabels;
-                    this.charts.fenomeno.data.datasets[0].data = fenomenoData;
-                    this.charts.fenomeno.update('active');
-
-                    // Actualizar gráfico de departamentos (Top 10)
-                    const sortedDept = Object.entries(stats.byDepartamento)
-                        .sort((a, b) => b[1] - a[1])
-                        .slice(0, 10);
-
-                    this.charts.departamento.data.labels = sortedDept.map(d => d[0]);
-                    this.charts.departamento.data.datasets[0].data = sortedDept.map(d => d[1]);
-                    this.charts.departamento.update('active');
-
-                    Logger.info('Gráficos actualizados');
-
-                } catch (error) {
-                    Logger.error('Error actualizando charts:', error);
-                }
-            }
-        }
-
-        class TableManager {
-            constructor() {
-                this.currentPage = 1;
-                this.sortField = 'timestamp';
-                this.sortDirection = 'desc';
-                this.data = [];
-            }
-
-            update(data) {
-                this.data = [...data];
-                this.applySorting();
-                this.currentPage = 1;
-                this.render();
-            }
-
-            applySorting() {
-                this.data.sort((a, b) => {
-                    let aVal = a[this.sortField];
-                    let bVal = b[this.sortField];
-
-                    // Manejo especial para timestamps
-                    if (this.sortField === 'timestamp') {
-                        aVal = a.timestamp || 0;
-                        bVal = b.timestamp || 0;
-                    }
-
-                    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-                    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-
-                    if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
-                    if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
-                    return 0;
-                });
-            }
-
-            setSort(field) {
-                if (this.sortField === field) {
-                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-                } else {
-                    this.sortField = field;
-                    this.sortDirection = 'desc';
-                }
-                this.applySorting();
-                this.currentPage = 1;
-                this.render();
-            }
-
-            render() {
-                const tbody = document.getElementById('tableBody');
-                const totalPages = Math.ceil(this.data.length / CONFIG.PAGE_SIZE);
-                const start = (this.currentPage - 1) * CONFIG.PAGE_SIZE;
-                const end = start + CONFIG.PAGE_SIZE;
-                const pageData = this.data.slice(start, end);
-
-                if (this.data.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
-                                <p class="mt-2">No se encontraron registros con los filtros seleccionados</p>
-                            </td>
-                        </tr>
-                    `;
-                    this.updatePagination(0, 0);
-                    return;
-                }
-
-                tbody.innerHTML = pageData.map(item => `
-                    <tr>
-                        <td>${Sanitizer.sanitizeText(item['Fecha (AAAAMMDD)'])}</td>
-                        <td>${Sanitizer.sanitizeText(item['Localidad'])}</td>
-                        <td>${Sanitizer.sanitizeText(item['Departamento'])}</td>
-                        <td>
-                            <span class="badge" style="background: ${this.getBadgeColor(item['Tipo de fenómeno (GRA/RAF/TOR)'])}">
-                                ${Sanitizer.sanitizeText(item['Tipo de fenómeno (GRA/RAF/TOR)'])}
-                            </span>
-                        </td>
-                        <td>${Sanitizer.sanitizeText(item['Intensidad / Tamaño / Escala'])}</td>
-                        <td>${Sanitizer.sanitizeText(item['Descripción / Información adicional'], 150)}</td>
-                        <td>
-                            ${item['Fuente'] && Sanitizer.isValidURL(item['Fuente']) ? 
-                                `<a href="${item['Fuente']}" target="_blank" rel="noopener noreferrer" 
-                                   class="btn btn-sm btn-outline-primary" title="Abrir fuente">
-                                   <i class="bi bi-box-arrow-up-right"></i>
-                                </a>` : 
-                                `<span class="text-muted"><i class="bi bi-dash"></i></span>`
-                            }
-                        </td>
-                    </tr>
-                `).join('');
-
-                this.updatePagination(this.currentPage, totalPages);
-            }
-
-            updatePagination(current, total) {
-                const info = document.getElementById('paginationInfo');
-                const controls = document.getElementById('paginationControls');
-                
-                const totalRecords = this.data.length;
-                const start = total > 0 ? (current - 1) * CONFIG.PAGE_SIZE + 1 : 0;
-                const end = Math.min(current * CONFIG.PAGE_SIZE, totalRecords);
-
-                info.textContent = `Mostrando ${start}-${end} de ${totalRecords} registros`;
-
-                // Renderizar controles de paginación
-                controls.innerHTML = '';
-                
-                const prevLi = document.createElement('li');
-                prevLi.className = `page-item ${current === 1 ? 'disabled' : ''}`;
-                prevLi.innerHTML = `<a class="page-link" href="#" data-page="${current - 1}">Anterior</a>`;
-                controls.appendChild(prevLi);
-
-                const maxButtons = 5;
-                let startPage = Math.max(1, current - Math.floor(maxButtons / 2));
-                let endPage = Math.min(total, startPage + maxButtons - 1);
-                if (endPage - startPage < maxButtons - 1) {
-                    startPage = Math.max(1, endPage - maxButtons + 1);
-                }
-
-                for (let i = startPage; i <= endPage; i++) {
-                    const li = document.createElement('li');
-                    li.className = `page-item ${i === current ? 'active' : ''}`;
-                    li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
-                    controls.appendChild(li);
-                }
-
-                const nextLi = document.createElement('li');
-                nextLi.className = `page-item ${current === total || total === 0 ? 'disabled' : ''}`;
-                nextLi.innerHTML = `<a class="page-link" href="#" data-page="${current + 1}">Siguiente</a>`;
-                controls.appendChild(nextLi);
-
-                // Event listeners
-                controls.querySelectorAll('.page-link').forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const page = parseInt(e.target.dataset.page);
-                        if (!isNaN(page) && page >= 1 && page <= total) {
-                            this.currentPage = page;
-                            this.render();
-                        }
-                    });
-                });
-            }
-
-            getBadgeColor(fenomeno) {
-                const colors = {
-                    'GRA': '#dc3545',
-                    'RAF': '#0d6efd',
-                    'TOR': '#ffc107'
-                };
-                return colors[fenomeno] || '#6c757d';
-            }
-        }
-
-        class FilterManager {
-            constructor(dataManager, callback) {
-                this.dataManager = dataManager;
-                this.callback = callback;
-                this.filters = {
-                    departamento: '',
-                    fenomenos: ['GRA', 'RAF', 'TOR']
-                };
-                this.init();
-            }
-
-            init() {
-                this.createFenomenoCheckboxes();
-                this.loadFromStorage();
-                this.attachEvents();
-            }
-
-            createFenomenoCheckboxes() {
-                const container = document.getElementById('fenomenoFilter');
-                const fenomenos = Array.from(this.dataManager.fenomenos).sort();
-                
-                container.innerHTML = fenomenos.map(fenomeno => `
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="check${fenomeno}" value="${fenomeno}" 
-                               ${this.filters.fenomenos.includes(fenomeno) ? 'checked' : ''}>
-                        <label class="form-check-label" for="check${fenomeno}">
-                            ${this.getFenomenoLabel(fenomeno)}
-                        </label>
-                    </div>
-                `).join('');
-            }
-
-            getFenomenoLabel(fenomeno) {
-                const labels = {
-                    'GRA': 'Granizo',
-                    'RAF': 'Ráfaga',
-                    'TOR': 'Tornado'
-                };
-                return `${labels[fenomeno] || 'Desconocido'} (${fenomeno})`;
-            }
-
-            attachEvents() {
-                const deptFilter = document.getElementById('departamentoFilter');
-                const fenomenoFilter = document.getElementById('fenomenoFilter');
-                const clearButton = document.getElementById('clearFilters');
-
-                deptFilter.addEventListener('change', debounce(() => this.updateFilters(), CONFIG.DEBOUNCE_DELAY));
-                fenomenoFilter.addEventListener('change', debounce(() => this.updateFilters(), CONFIG.DEBOUNCE_DELAY));
-                clearButton.addEventListener('click', () => this.clearFilters());
-
-                // Ordenación de tabla
-                document.querySelectorAll('#dataTable th[data-sort]').forEach(th => {
-                    th.style.cursor = 'pointer';
-                    th.addEventListener('click', () => {
-                        const field = th.dataset.sort;
-                        window.tableManager.setSort(field);
-                    });
-                });
-
-                // Exportar CSV
-                document.getElementById('exportCSV').addEventListener('click', () => this.exportCSV());
-            }
-
-            updateFilters() {
-                this.filters.departamento = document.getElementById('departamentoFilter').value;
-                this.filters.fenomenos = Array.from(document.querySelectorAll('#fenomenoFilter input:checked'))
-                    .map(cb => cb.value);
-
-                this.saveToStorage();
-                this.callback(this.filters);
-            }
-
-            clearFilters() {
-                this.filters = {
-                    departamento: '',
-                    fenomenos: Array.from(this.dataManager.fenomenos)
-                };
-                
-                document.getElementById('departamentoFilter').value = '';
-                this.createFenomenoCheckboxes();
-                this.updateFilters();
-            }
-
-            saveToStorage() {
-                localStorage.setItem('weatherFilters', JSON.stringify(this.filters));
-            }
-
-            loadFromStorage() {
-                const saved = localStorage.getItem('weatherFilters');
-                if (saved) {
-                    try {
-                        this.filters = JSON.parse(saved);
-                    } catch (e) {
-                        Logger.warn('Error cargando filtros guardados:', e);
-                    }
-                }
-            }
-
-            exportCSV() {
-                const data = this.dataManager.filteredData;
-                if (data.length === 0) return;
-
-                const headers = ['Fecha', 'Localidad', 'Departamento', 'Fenómeno', 'Intensidad', 'Descripción'];
-                const csvContent = [
-                    headers.join(','),
-                    ...data.map(row => [
-                        row['Fecha (AAAAMMDD)'],
-                        row['Localidad'],
-                        row['Departamento'],
-                        row['Tipo de fenómeno (GRA/RAF/TOR)'],
-                        row['Intensidad / Tamaño / Escala'],
-                        row['Descripción / Información adicional']
-                    ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`).join(','))
-                ].join('\n');
-
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `eventos_meteorologicos_${new Date().toISOString().split('T')[0]}.csv`;
-                link.click();
-            }
-        }
-
-        // =============================================================================
-        // CONTROLADOR PRINCIPAL
-        // =============================================================================
-
-        class DashboardController {
-            constructor() {
-                this.dataManager = new DataManager();
-                this.uiManager = new UIManager();
-                this.mapManager = null;
-                this.chartManager = null;
-                this.tableManager = null;
-                this.filterManager = null;
-            }
-
-            async init() {
-                try {
-                    this.uiManager.showLoading();
-                    
-                    // Cargar datos
-                    await this.dataManager.loadData();
-                    
-                    // Inicializar componentes
-                    this.initializeComponents();
-                    
-                    // Crear filtros
-                    this.populateDepartamentos();
-                    this.filterManager = new FilterManager(this.dataManager, (filters) => this.updateDashboard(filters));
-                    
-                    // Actualizar dashboard
-                    this.updateDashboard(this.filterManager.filters);
-                    
-                    this.uiManager.showMain();
-                    Logger.info('Dashboard inicializado exitosamente');
-                    
-                } catch (error) {
-                    Logger.error('Error fatal en inicialización:', error);
-                    
-                    let details = '';
-                    if (error.message && error.message.length > 200) {
-                        details = error.message.substring(0, 200) + '...';
-                    }
-
-                    this.uiManager.showError(
-                        error.message || 'Error desconocido',
-                        details,
-                        () => location.reload()
-                    );
-
-                    // Actualizar debug info
-                    this.uiManager.updateDebug(CONFIG.GOOGLE_SHEETS_URL, 'ERROR', 0);
-                }
-            }
-
-            initializeComponents() {
-                try {
-                    this.mapManager = new MapManager('map');
-                    this.chartManager = new ChartManager();
-                    this.tableManager = new TableManager();
-                    Logger.info('Componentes UI inicializados');
-                } catch (error) {
-                    Logger.error('Error inicializando componentes:', error);
-                    throw new Error('No se pudieron inicializar los componentes visuales');
-                }
-            }
-
-            populateDepartamentos() {
-                const select = document.getElementById('departamentoFilter');
-                const departamentos = Array.from(this.dataManager.departamentos).sort();
-                
-                select.innerHTML = '<option value="">Todos los Departamentos</option>' +
-                    departamentos.map(dept => 
-                        `<option value="${Sanitizer.escapeHTML(dept)}">${Sanitizer.escapeHTML(dept)}</option>`
-                    ).join('');
-                
-                Logger.info(`Departamentos cargados: ${departamentos.length}`);
-            }
-
-            updateDashboard(filters) {
-                try {
-                    // Filtrar datos
-                    const filteredData = this.dataManager.filterData(filters);
-                    const stats = this.dataManager.getStats();
-
-                    // Actualizar componentes
-                    this.mapManager.update(filteredData);
-                    this.chartManager.update(filteredData, stats);
-                    this.tableManager.update(filteredData);
-                    
-                    // Actualizar KPIs
-                    this.updateKPIs(stats, filteredData.length);
-                    
-                    // Actualizar estado de filtros
-                    this.uiManager.updateFilterStatus(this.dataManager.rawData.length, filteredData.length);
-                    
-                    // Debug info
-                    this.uiManager.updateDebug(CONFIG.GOOGLE_SHEETS_URL, 'OK', filteredData.length);
-
-                } catch (error) {
-                    Logger.error('Error actualizando dashboard:', error);
-                    this.uiManager.showError('Error al actualizar la visualización');
-                }
-            }
-
-            updateKPIs(stats, filteredTotal) {
-                const container = document.getElementById('kpiContainer');
-                const totalEventos = this.dataManager.rawData.length;
-                const eventosValidos = filteredTotal;
-                const tasaExitos = totalEventos > 0 ? ((eventosValidos / totalEventos) * 100).toFixed(1) : 0;
-
-                container.innerHTML = `
-                    <div class="col-md-3">
-                        <div class="dashboard-card text-center">
-                            <h3 class="text-primary">${eventosValidos}</h3>
-                            <p class="mb-0 text-muted">Eventos en Mapa</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="dashboard-card text-center">
-                            <h3 class="text-success">${tasaExitos}%</h3>
-                            <p class="mb-0 text-muted">Tasa de Geolocalización</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="dashboard-card text-center">
-                            <h3 class="text-warning">${Object.keys(stats.byFenomeno).length}</h3>
-                            <p class="mb-0 text-muted">Tipos de Fenómeno</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="dashboard-card text-center">
-                            <h3 class="text-info">${Object.keys(stats.byDepartamento).length}</h3>
-                            <p class="mb-0 text-muted">Departamentos Afectados</p>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        // =============================================================================
-        // INICIALIZACIÓN DE LA APLICACIÓN
-        // =============================================================================
-
-        // Registrar Service Worker para cache offline
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('data:application/javascript,console.log("Service Worker registrado")')
-                .catch(err => Logger.warn('Service Worker no registrado:', err));
-        }
-
-        // Inicializar cuando el DOM esté listo
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                const app = new DashboardController();
-                app.init();
-            });
-        } else {
-            const app = new DashboardController();
-            app.init();
-        }
-
-        // Exponer para debugging
-        window.DashboardApp = {
-            CONFIG,
-            Logger,
-            Sanitizer,
-            CSVParser,
-            DataManager,
-            DashboardController
-        };
-
-        // Debug info en consola
-        Logger.info('=== INFORMACIÓN DE DEBUG ===');
-        Logger.info('URL Configurada:', CONFIG.GOOGLE_SHEETS_URL);
-        Logger.info('Debug Mode:', CONFIG.DEBUG_MODE);
-        Logger.info('Para ver errores detallados, abre la consola (F12)');
-    </script>
+    <!-- Librerías JS de terceros -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+            crossorigin="anonymous"></script>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+            crossorigin="anonymous"></script>
+
+    <!-- Lógica de la aplicación -->
+    <script src="js/app.js"></script>
 </body>
 </html>
