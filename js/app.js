@@ -316,11 +316,11 @@ class DataManager {
         const deptSet = new Set();
         const fenSet = new Set();
         this.rawData.forEach(function (row) {
-            if (row["Departamento"]) {
-                deptSet.add(row["Departamento"]);
+            if (row["Departamento_corr"]) {
+                deptSet.add(row["Departamento_corr"]);
             }
-            if (row["Tipo de fenómeno (GRA/RAF/TOR)"]) {
-                fenSet.add(row["Tipo de fenómeno (GRA/RAF/TOR)"]);
+            if (row["Tipo de fenómeno CORR (GRA/RAF/TOR)"]) {
+                fenSet.add(row["Tipo de fenómeno CORR (GRA/RAF/TOR)"]);
             }
         });
         this.departamentos = Array.from(deptSet).sort();
@@ -339,8 +339,8 @@ class DataManager {
         }
 
         const result = this.rawData.filter(function (row) {
-            const dept = row["Departamento"] || "";
-            const tipo = row["Tipo de fenómeno (GRA/RAF/TOR)"] || "";
+            const dept = row["Departamento_corr"] || "";
+            const tipo = row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "";
             const lat = row["Latitud (grados, 4 dec.)"];
             const lon = row["Longitud (grados, 4 dec.)"];
 
@@ -368,8 +368,8 @@ class DataManager {
         const byFenomeno = {};
         const byDepartamento = {};
         data.forEach(function (row) {
-            const tipo = row["Tipo de fenómeno (GRA/RAF/TOR)"] || "Desconocido";
-            const dept = row["Departamento"] || "Desconocido";
+            const tipo = row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "Desconocido";
+            const dept = row["Departamento_corr"] || "Desconocido";
             byFenomeno[tipo] = (byFenomeno[tipo] || 0) + 1;
             byDepartamento[dept] = (byDepartamento[dept] || 0) + 1;
         });
@@ -534,7 +534,7 @@ class MapManager {
                 return;
             }
 
-            const tipo = row["Tipo de fenómeno (GRA/RAF/TOR)"] || "";
+            const tipo = row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "";
             const color = MapManager.getColor(tipo);
 
             const popup =
@@ -542,7 +542,7 @@ class MapManager {
                 "<h6>" + Sanitizer.sanitizeText(row["Localidad"]) + "</h6>" +
                 "<div>" +
                 "<strong>Departamento:</strong> " +
-                Sanitizer.sanitizeText(row["Departamento"]) + "<br>" +
+                Sanitizer.sanitizeText(row["Departamento_corr"]) + "<br>" +
                 "<strong>Fenómeno:</strong> " +
                 '<span class="badge" style="background:' + color + ';">' +
                 Sanitizer.sanitizeText(tipo) + "</span><br>" +
@@ -800,7 +800,7 @@ class TableManager {
         const pageData = this.data.slice(start, end);
 
         const rows = pageData.map(function (row) {
-            const tipo = row["Tipo de fenómeno (GRA/RAF/TOR)"] || "";
+            const tipo = row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "";
             const color = MapManager.getColor(tipo);
 
             const fuenteHTML = row["Fuente"] && Sanitizer.isValidURL(row["Fuente"])
@@ -814,7 +814,7 @@ class TableManager {
                 "<tr>" +
                 "<td>" + Sanitizer.sanitizeText(row["Fecha"]) + "</td>" +
                 "<td>" + Sanitizer.sanitizeText(row["Localidad"]) + "</td>" +
-                "<td>" + Sanitizer.sanitizeText(row["Departamento"]) + "</td>" +
+                "<td>" + Sanitizer.sanitizeText(row["Departamento_corr"]) + "</td>" +
                 '<td><span class="badge" style="background:' + color + ';">' +
                 Sanitizer.sanitizeText(tipo) + "</span></td>" +
                 "<td>" + Sanitizer.sanitizeText(row["Intensidad / Tamaño / Escala"]) + "</td>" +
@@ -1082,8 +1082,8 @@ class FilterManager {
         const headers = [
             "Fecha",
             "Localidad",
-            "Departamento",
-            "Tipo de fenómeno (GRA/RAF/TOR)",
+            "Departamento_corr",
+            "Tipo de fenómeno CORR (GRA/RAF/TOR)",
             "Intensidad / Tamaño / Escala",
             "Descripción / Información adicional",
             "Latitud (grados, 4 dec.)",
