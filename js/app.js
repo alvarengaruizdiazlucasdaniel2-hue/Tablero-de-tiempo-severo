@@ -177,9 +177,9 @@ const CSVParser = {
     },
 
     isValidRow: function (row) {
-        const dept = (row["Departamento"] || "").trim();
-        const tipo = (row["Tipo de fenómeno (GRA/RAF/TOR)"] || "").trim();
-        const fecha = (row["Fecha (AAAAMMDD)"] || "").trim();
+        const dept = (row["Departamento_corr"] || "").trim();
+        const tipo = (row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "").trim();
+        const fecha = (row["Fecha"] || "").trim();
         if (!dept || !tipo || !/^\d{8}$/.test(fecha)) {
             return false;
         }
@@ -187,12 +187,12 @@ const CSVParser = {
     },
 
     cleanRow: function (row) {
-        const fechaRaw = (row["Fecha (AAAAMMDD)"] || "").trim();
+        const fechaRaw = (row["Fecha"] || "").trim();
         if (/^\d{8}$/.test(fechaRaw)) {
             const y = fechaRaw.substring(0, 4);
             const m = fechaRaw.substring(4, 6);
             const d = fechaRaw.substring(6, 8);
-            row["Fecha (AAAAMMDD)"] = y + "-" + m + "-" + d;
+            row["Fecha"] = y + "-" + m + "-" + d;
             row.timestamp = Date.parse(y + "-" + m + "-" + d + "T00:00:00Z") || 0;
         } else {
             row.timestamp = 0;
@@ -547,7 +547,7 @@ class MapManager {
                 '<span class="badge" style="background:' + color + ';">' +
                 Sanitizer.sanitizeText(tipo) + "</span><br>" +
                 "<strong>Fecha:</strong> " +
-                Sanitizer.sanitizeText(row["Fecha (AAAAMMDD)"]) + "<br>" +
+                Sanitizer.sanitizeText(row["Fecha"]) + "<br>" +
                 "<strong>Intensidad:</strong> " +
                 Sanitizer.sanitizeText(row["Intensidad / Tamaño / Escala"]) + "<br>" +
                 "<hr>" +
@@ -812,7 +812,7 @@ class TableManager {
 
             return (
                 "<tr>" +
-                "<td>" + Sanitizer.sanitizeText(row["Fecha (AAAAMMDD)"]) + "</td>" +
+                "<td>" + Sanitizer.sanitizeText(row["Fecha"]) + "</td>" +
                 "<td>" + Sanitizer.sanitizeText(row["Localidad"]) + "</td>" +
                 "<td>" + Sanitizer.sanitizeText(row["Departamento"]) + "</td>" +
                 '<td><span class="badge" style="background:' + color + ';">' +
@@ -1080,7 +1080,7 @@ class FilterManager {
         if (!data.length) return;
 
         const headers = [
-            "Fecha (AAAAMMDD)",
+            "Fecha",
             "Localidad",
             "Departamento",
             "Tipo de fenómeno (GRA/RAF/TOR)",
