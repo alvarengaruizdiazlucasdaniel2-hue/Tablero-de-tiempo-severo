@@ -178,7 +178,7 @@ const CSVParser = {
 
     isValidRow: function (row) {
         const dept = (row["Departamento_corr"] || "").trim();
-        const tipo = (row["Tipo de fenómeno CORR (GRA/RAF/TOR/FUN)"] || "").trim();
+        const tipo = (row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "").trim();
         const fecha = (row["Fecha"] || "").trim();
         if (!dept || !tipo || !/^\d{8}$/.test(fecha)) {
             return false;
