@@ -3,232 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Meteorológico Severo | Paraguay</title>
+    <title>Tablero Estadístico - Ráfagas</title>
 
-    <!-- Content Security Policy compatible con GitHub Pages y recursos usados -->
-    <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self' https:;
-                   script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com;
-                   style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com;
-                   img-src 'self' data: https://*.openstreetmap.org;
-                   connect-src 'self' https://docs.google.com https://www.googleapis.com https:;">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
-          crossorigin="anonymous">
+    <!-- PapaParse -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin="anonymous">
+    <!-- SheetJS para descargar Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Leaflet Mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Estilos propios -->
-    <link rel="stylesheet" href="css/styles.css">
-
-    <!-- PWA -->
-    <link rel="manifest" href="manifest.webmanifest">
-    <meta name="theme-color" content="#004085">
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-    <header class="dashboard-header">
-        <div class="container">
-            <h1 class="h3 mb-1">Tablero de Fenómenos Meteorológicos Severos</h1>
-            <p class="mb-0">
-                Sistema de monitoreo de reportes de granizo, ráfagas y tornados en Paraguay,
-                basado en la base colaborativa de eventos severos.
-            </p>
-        </div>
-    </header>
 
-    <main class="container flex-grow-1">
+<header>
+    <h1>Tablero Estadístico - Ráfagas</h1>
+</header>
 
-        <!-- Estado de carga -->
-        <div id="loadingState" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-            <p class="mt-3 text-muted">Inicializando sistema de monitoreo...</p>
-        </div>
+<!-- Filtros -->
+<section class="panel">
+    <h2>Filtros</h2>
 
-        <!-- Estado de error -->
-        <div id="errorState" class="error-state" style="display:none;">
-            <h3><i class="bi bi-exclamation-triangle"></i> Error al cargar la información</h3>
-            <p id="errorMessage"></p>
-            <div id="errorDetails" style="display:none;"></div>
-            <button id="retryButton" class="btn btn-danger btn-sm mt-2">Reintentar</button>
-            <button id="debugButton" class="btn btn-warning btn-sm mt-2 ms-2" style="display:none;">
-                Ver diagnóstico
-            </button>
-        </div>
+    <label><b>Desde:</b></label>
+    <input type="date" id="desde">
 
-        <!-- Contenido principal -->
-        <div id="mainContent" style="display:none;">
+    <label><b>Hasta:</b></label>
+    <input type="date" id="hasta">
 
-            <!-- Panel de filtros -->
-            <section class="filter-section" aria-label="Filtros de datos">
-                <h5 class="mb-3">
-                    <i class="bi bi-funnel"></i> Panel de filtros
-                </h5>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="departamentoFilter" class="form-label fw-semibold">Departamento</label>
-                        <select id="departamentoFilter"
-                                class="form-select form-select-sm"
-                                aria-label="Filtrar por departamento">
-                            <option value="">Todos los Departamentos</option>
-                        </select>
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label fw-semibold">Tipo de fenómeno</label>
-                        <div id="fenomenoFilter"
-                             class="d-flex flex-wrap gap-3"
-                             role="group"
-                             aria-label="Filtros de fenómeno">
-                            <!-- Generado dinámicamente -->
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-3 align-items-center">
-                    <div class="col-auto">
-                        <button id="clearFilters" class="btn btn-outline-secondary btn-sm">
-                            Limpiar filtros
-                        </button>
-                    </div>
-                    <div class="col">
-                        <span id="filterStatus" class="ms-3 text-muted"></span>
-                    </div>
-                </div>
-            </section>
+    <button id="btnFiltrar">Aplicar filtros</button>
+    <button id="btnReset">Resetear</button>
+    <button id="btnDescargar">Descargar Excel</button>
+</section>
 
-            <!-- KPIs -->
-            <div class="row mb-4" id="kpiContainer">
-                <!-- Generado dinámicamente -->
-            </div>
+<!-- Selector de variable -->
+<section class="panel">
+    <label><b>Variable a analizar:</b></label>
+    <select id="variableSelect"></select>
+</section>
 
-            <!-- Grid de visualización -->
-            <div class="row g-4">
-                <!-- Mapa -->
-                <div class="col-lg-8">
-                    <div class="dashboard-card fade-in">
-                        <h2 class="card-title">
-                            <i class="bi bi-map"></i> Mapa de eventos geolocalizados
-                        </h2>
-                        <div id="map" aria-label="Mapa interactivo de eventos severos"></div>
-                    </div>
-                </div>
+<!-- Estadísticos -->
+<section class="stats">
+    <h2>Estadísticos</h2>
 
-                <!-- Gráficos -->
-                <div class="col-lg-4">
-                    <div class="dashboard-card fade-in">
-                        <h2 class="card-title">
-                            <i class="bi bi-pie-chart"></i> Distribución por tipo de fenómeno
-                        </h2>
-                        <div class="chart-container">
-                            <canvas id="fenomenoChart"
-                                    aria-label="Distribución de eventos por tipo"></canvas>
-                        </div>
-                    </div>
-                    <div class="dashboard-card fade-in">
-                        <h2 class="card-title">
-                            <i class="bi bi-bar-chart"></i> Top 10 departamentos con reportes
-                        </h2>
-                        <div class="chart-container">
-                            <canvas id="departamentoChart"
-                                    aria-label="Eventos por departamento"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabla de datos -->
-            <section class="dashboard-card fade-in mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="card-title mb-0">
-                        <i class="bi bi-table"></i> Registros detallados
-                    </h2>
-                    <div>
-                        <button id="exportCSV" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-download"></i> Exportar CSV filtrado
-                        </button>
-                    </div>
-                </div>
-
-                <div class="data-table-container">
-                    <table id="dataTable"
-                           class="table table-hover table-sm align-middle"
-                           aria-label="Tabla de eventos meteorológicos severos">
-                        <thead>
-                            <tr>
-                                <th scope="col" data-sort="fecha">
-                                    Fecha <i class="bi bi-arrow-down-up"></i>
-                                </th>
-                                <th scope="col" data-sort="Horario (UTC)">
-                                    Horario <i class="bi bi-arrow-down-up"></i>
-                                </th>
-                                <th scope="col" data-sort="Localidad">
-                                    Localidad <i class="bi bi-arrow-down-up"></i>
-                                </th>
-                                <th scope="col" data-sort="Departamento_corr">
-                                    Departamento <i class="bi bi-arrow-down-up"></i>
-                                </th>
-                                <th scope="col" data-sort="Tipo de fenómeno CORR (GRA/RAF/TOR)">
-                                    Fenómeno <i class="bi bi-arrow-down-up"></i>
-                                </th>
-                                <th scope="col" data-sort="Intensidad / Tamaño / Escala">
-                                    Intensidad
-                                </th>
-                                <th scope="col" data-sort="Descripción / Información adicional">
-                                    Descripción
-                                </th>
-                                <th scope="col" data-sort="Fuente">
-                                    Fuente
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            <!-- Generado dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="pagination-container">
-                    <div id="paginationInfo" class="text-muted"></div>
-                    <nav aria-label="Paginación">
-                        <ul id="paginationControls" class="pagination pagination-sm mb-0">
-                            <!-- Generado dinámicamente -->
-                        </ul>
-                    </nav>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- Panel debug (opcional) -->
-    <div id="debugPanel" class="debug-info">
-        <strong>Debug</strong><br>
-        URL: <span id="debugURL"></span><br>
-        Estado: <span id="debugStatus"></span><br>
-        Registros: <span id="debugDataCount"></span>
+    <div class="grid">
+        <div class="card"><h3>Media</h3><p id="statMedia"></p></div>
+        <div class="card"><h3>Mediana</h3><p id="statMediana"></p></div>
+        <div class="card"><h3>Máx</h3><p id="statMax"></p></div>
+        <div class="card"><h3>Mín</h3><p id="statMin"></p></div>
+        <div class="card"><h3>P90</h3><p id="statP90"></p></div>
+        <div class="card"><h3>Varianza</h3><p id="statVar"></p></div>
     </div>
+</section>
 
-    <!-- Librerías JS de terceros -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-            crossorigin="anonymous"></script>
+<!-- Gráficos -->
+<section class="graficos">
+    <h2>Serie Temporal</h2>
+    <canvas id="chartLinea"></canvas>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin="anonymous"></script>
+    <h2>Barras</h2>
+    <canvas id="chartBarras"></canvas>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
-            crossorigin="anonymous"></script>
+    <h2>Histograma</h2>
+    <canvas id="chartHist"></canvas>
+</section>
 
-    <!-- Lógica de la aplicación -->
-    <script src="js/app.js"></script>
+<!-- Mapa -->
+<section>
+    <h2>Mapa de Eventos</h2>
+    <div id="map" style="height: 400px;"></div>
+</section>
+
+<!-- Tabla -->
+<section class="tabla">
+    <h2>Datos Crudos</h2>
+    <table id="tablaDatos"></table>
+</section>
+
+<script src="app.js"></script>
 </body>
 </html>
