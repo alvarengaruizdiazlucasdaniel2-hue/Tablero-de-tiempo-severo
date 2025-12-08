@@ -1025,7 +1025,7 @@ class FilterManager {
             "GRA": "Granizo (GRA)",
             "RAF": "Ráfagas (RAF)",
             "TOR": "Tornado (TOR)",
-            "FUN": "Nube emdudo" (FUN)",
+            "FUN": "Fenómeno múltiple (FUN)",
             "N/S": "No especificado (N/S)"
         };
         return labels[code] || code;
