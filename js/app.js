@@ -7,7 +7,7 @@
 /* ========================================================================== */
 
 const CONFIG = {
-    SHEET_ID: "1ds1yTLpwUdc-3vK3tNWZL6C0TY51poVra14INby6VM0",
+    SHEET_ID: "1Kqsyu7XEXl52Jy5fw_WvG7g_HodA6GsIzFtjYZvK9MU",
     PAGE_SIZE: 50,
     MAP_CENTER: [-23.4425, -58.4438],
     MAP_ZOOM: 6,
