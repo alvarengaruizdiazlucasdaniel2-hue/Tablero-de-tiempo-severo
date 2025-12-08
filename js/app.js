@@ -180,7 +180,15 @@ const CSVParser = {
         const dept = (row["Departamento_corr"] || "").trim();
         const tipo = (row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "").trim();
         const fecha = (row["Fecha"] || "").trim();
-        if (!dept || !tipo || !/^\d{8}$/.test(fecha)) {
+        
+        // Aceptar fechas válidas (formato AAAAMMDD) o valores como "Tarde", "Mañana", etc.
+        const fechaValida = /^\d{8}$/.test(fecha) || 
+                           fecha.toLowerCase() === "tarde" || 
+                           fecha.toLowerCase() === "mañana" ||
+                           fecha.toLowerCase() === "noche" ||
+                           fecha.toLowerCase() === "amanecer";
+        
+        if (!dept || !tipo || !fechaValida) {
             return false;
         }
         return true;
@@ -188,32 +196,62 @@ const CSVParser = {
 
     cleanRow: function (row) {
         const fechaRaw = (row["Fecha"] || "").trim();
+        
+        // Manejar diferentes formatos de fecha
         if (/^\d{8}$/.test(fechaRaw)) {
             const y = fechaRaw.substring(0, 4);
             const m = fechaRaw.substring(4, 6);
             const d = fechaRaw.substring(6, 8);
             row["Fecha"] = y + "-" + m + "-" + d;
             row.timestamp = Date.parse(y + "-" + m + "-" + d + "T00:00:00Z") || 0;
+        } else if (fechaRaw.toLowerCase() === "tarde" || 
+                   fechaRaw.toLowerCase() === "mañana" || 
+                   fechaRaw.toLowerCase() === "noche" ||
+                   fechaRaw.toLowerCase() === "amanecer") {
+            // Manejar valores de tiempo relativo
+            row["Fecha"] = "Fecha estimada: " + fechaRaw;
+            row.timestamp = 0;
         } else {
+            row["Fecha"] = fechaRaw;
             row.timestamp = 0;
         }
 
+        // Parsear coordenadas, manejando valores vacíos o "-"
         const latStr = (row["Latitud (grados, 4 dec.)"] || "").toString().replace(",", ".");
         const lonStr = (row["Longitud (grados, 4 dec.)"] || "").toString().replace(",", ".");
-        const lat = parseFloat(latStr);
-        const lon = parseFloat(lonStr);
-
-        if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-            row["Latitud (grados, 4 dec.)"] = lat;
-            row["Longitud (grados, 4 dec.)"] = lon;
+        
+        // Convertir a número solo si no está vacío y no es "-"
+        if (latStr && latStr.trim() !== "-" && latStr.trim() !== "") {
+            const lat = parseFloat(latStr);
+            if (isFinite(lat) && lat >= -90 && lat <= 90) {
+                row["Latitud (grados, 4 dec.)"] = lat;
+            } else {
+                row["Latitud (grados, 4 dec.)"] = null;
+            }
         } else {
             row["Latitud (grados, 4 dec.)"] = null;
+        }
+
+        if (lonStr && lonStr.trim() !== "-" && lonStr.trim() !== "") {
+            const lon = parseFloat(lonStr);
+            if (isFinite(lon) && lon >= -180 && lon <= 180) {
+                row["Longitud (grados, 4 dec.)"] = lon;
+            } else {
+                row["Longitud (grados, 4 dec.)"] = null;
+            }
+        } else {
             row["Longitud (grados, 4 dec.)"] = null;
         }
 
+        // Limpiar y estandarizar otros campos
         Object.keys(row).forEach(function (key) {
             if (typeof row[key] === "string") {
-                row[key] = row[key].trim();
+                // Reemplazar N/S por "No especificado"
+                if (row[key].trim().toUpperCase() === "N/S") {
+                    row[key] = "No especificado";
+                } else {
+                    row[key] = row[key].trim();
+                }
             }
         });
 
@@ -341,19 +379,22 @@ class DataManager {
         const result = this.rawData.filter(function (row) {
             const dept = row["Departamento_corr"] || "";
             const tipo = row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "";
-            const lat = row["Latitud (grados, 4 dec.)"];
-            const lon = row["Longitud (grados, 4 dec.)"];
-
+            
+            // Validar que tenga departamento y tipo
+            if (!dept || !tipo) {
+                return false;
+            }
+            
+            // Aplicar filtros
             if (filters.departamento && dept !== filters.departamento) {
                 return false;
             }
+            
             if (filters.fenomenos && filters.fenomenos.length > 0 &&
                 filters.fenomenos.indexOf(tipo) === -1) {
                 return false;
             }
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-                return false;
-            }
+            
             return true;
         });
 
@@ -530,6 +571,8 @@ class MapManager {
         data.forEach(function (row) {
             const lat = row["Latitud (grados, 4 dec.)"];
             const lon = row["Longitud (grados, 4 dec.)"];
+            
+            // Solo mostrar en mapa si tiene coordenadas válidas
             if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
                 return;
             }
@@ -539,38 +582,46 @@ class MapManager {
 
             const popup =
                 '<div class="popup-content">' +
-                "<h6>" + Sanitizer.sanitizeText(row["Localidad"]) + "</h6>" +
+                "<h6>" + Sanitizer.sanitizeText(row["Localidad"] || "Sin localidad") + "</h6>" +
                 "<div>" +
                 "<strong>Departamento:</strong> " +
                 Sanitizer.sanitizeText(row["Departamento_corr"]) + "<br>" +
-                "<strong>Fenómeno:</strong> " +
-                '<span class="badge" style="background:' + color + ';">' +
-                Sanitizer.sanitizeText(tipo) + "</span><br>" +
                 "<strong>Fecha:</strong> " +
                 Sanitizer.sanitizeText(row["Fecha"]) + "<br>" +
-                "<strong>Intensidad:</strong> " +
-                Sanitizer.sanitizeText(row["Intensidad / Tamaño / Escala"]) + "<br>" +
-                "<hr>" +
-                "<p>" +
-                Sanitizer.sanitizeText(
-                    row["Descripción / Información adicional"],
-                    220
-                ) +
-                "</p>" +
-                (row["Fuente"] && Sanitizer.isValidURL(row["Fuente"])
-                    ? '<a href="' + row["Fuente"] +
-                      '" target="_blank" rel="noopener noreferrer">Ver fuente</a>'
-                    : "") +
-                "</div></div>";
+                "<strong>Horario (UTC):</strong> " +
+                Sanitizer.sanitizeText(row["Horario (UTC)"] || "No especificado") + "<br>" +
+                "<strong>Fenómeno:</strong> " +
+                '<span class="badge" style="background:' + color + ';">' +
+                Sanitizer.sanitizeText(tipo) + "</span><br>";
+
+            // Agregar campos adicionales si existen
+            if (row["Intensidad / Tamaño / Escala"] && row["Intensidad / Tamaño / Escala"] !== "No especificado") {
+                popup += "<strong>Intensidad:</strong> " +
+                         Sanitizer.sanitizeText(row["Intensidad / Tamaño / Escala"]) + "<br>";
+            }
+
+            popup += "<hr>";
+
+            if (row["Descripción / Información adicional"] && row["Descripción / Información adicional"] !== "No especificado") {
+                popup += "<p>" +
+                         Sanitizer.sanitizeText(row["Descripción / Información adicional"], 220) +
+                         "</p>";
+            }
+
+            if (row["Fuente"] && Sanitizer.isValidURL(row["Fuente"])) {
+                popup += '<a href="' + row["Fuente"] +
+                         '" target="_blank" rel="noopener noreferrer">Ver fuente</a>';
+            }
+
+            popup += "</div></div>";
 
             const icon = L.divIcon({
-                html:
-                    '<div style="' +
-                    "width:12px;height:12px;border-radius:50%;" +
-                    "background:" + color + ";" +
-                    "border:2px solid #ffffff;" +
-                    "box-shadow:0 2px 6px rgba(0,0,0,0.4);" +
-                    '"></div>',
+                html: '<div style="' +
+                      "width:12px;height:12px;border-radius:50%;" +
+                      "background:" + color + ";" +
+                      "border:2px solid #ffffff;" +
+                      "box-shadow:0 2px 6px rgba(0,0,0,0.4);" +
+                      '"></div>',
                 className: "custom-marker",
                 iconSize: [16, 16],
                 iconAnchor: [8, 8]
@@ -590,6 +641,7 @@ class MapManager {
         if (tipo === "GRA") return "#dc3545";
         if (tipo === "RAF") return "#0d6efd";
         if (tipo === "TOR") return "#ffc107";
+        if (tipo === "FUN") return "#198754";
         return "#6c757d";
     }
 }
@@ -627,7 +679,9 @@ class ChartManager {
                         "#0d6efd",
                         "#ffc107",
                         "#198754",
-                        "#6c757d"
+                        "#6c757d",
+                        "#20c997",
+                        "#fd7e14"
                     ],
                     borderColor: "#ffffff",
                     borderWidth: 2
@@ -759,12 +813,15 @@ class TableManager {
         const field = this.sortField;
         const dir = this.sortDir;
         this.data.sort(function (a, b) {
-            let va = a[field];
-            let vb = b[field];
+            let va, vb;
 
-            if (field === "timestamp") {
+            // Si el campo de ordenación es "fecha", usamos el timestamp
+            if (field === "fecha" || field === "Fecha") {
                 va = a.timestamp || 0;
                 vb = b.timestamp || 0;
+            } else {
+                va = a[field];
+                vb = b[field];
             }
 
             if (typeof va === "string") va = va.toLowerCase();
@@ -784,7 +841,7 @@ class TableManager {
 
         if (total === 0) {
             this.tbody.innerHTML =
-                '<tr><td colspan="7" class="text-center py-5 text-muted">' +
+                '<tr><td colspan="8" class="text-center py-5 text-muted">' +
                 '<i class="bi bi-inbox" style="font-size:2rem;"></i>' +
                 '<p class="mt-2 mb-0">No se encontraron registros para los filtros seleccionados</p>' +
                 "</td></tr>";
@@ -813,13 +870,14 @@ class TableManager {
             return (
                 "<tr>" +
                 "<td>" + Sanitizer.sanitizeText(row["Fecha"]) + "</td>" +
-                "<td>" + Sanitizer.sanitizeText(row["Localidad"]) + "</td>" +
+                "<td>" + Sanitizer.sanitizeText(row["Horario (UTC)"] || "No especificado") + "</td>" +
+                "<td>" + Sanitizer.sanitizeText(row["Localidad"] || "No especificado") + "</td>" +
                 "<td>" + Sanitizer.sanitizeText(row["Departamento_corr"]) + "</td>" +
                 '<td><span class="badge" style="background:' + color + ';">' +
                 Sanitizer.sanitizeText(tipo) + "</span></td>" +
-                "<td>" + Sanitizer.sanitizeText(row["Intensidad / Tamaño / Escala"]) + "</td>" +
+                "<td>" + Sanitizer.sanitizeText(row["Intensidad / Tamaño / Escala"] || "No especificado") + "</td>" +
                 "<td>" + Sanitizer.sanitizeText(
-                    row["Descripción / Información adicional"],
+                    row["Descripción / Información adicional"] || "No especificado",
                     150
                 ) + "</td>" +
                 "<td>" + fuenteHTML + "</td>" +
@@ -939,7 +997,7 @@ class FilterManager {
         if (this.fenContainer) {
             const fens = this.dataManager.fenomenos.length > 0
                 ? this.dataManager.fenomenos
-                : ["GRA", "RAF", "TOR"];
+                : ["GRA", "RAF", "TOR", "FUN", "N/S"];
 
             if (!this.filters.fenomenos || this.filters.fenomenos.length === 0) {
                 this.filters.fenomenos = fens.slice();
@@ -963,10 +1021,14 @@ class FilterManager {
     }
 
     getFenomenoLabel(code) {
-        if (code === "GRA") return "Granizo (GRA)";
-        if (code === "RAF") return "Ráfagas (RAF)";
-        if (code === "TOR") return "Tornado (TOR)";
-        return code;
+        const labels = {
+            "GRA": "Granizo (GRA)",
+            "RAF": "Ráfagas (RAF)",
+            "TOR": "Tornado (TOR)",
+            "FUN": "Nube emdudo" (FUN)",
+            "N/S": "No especificado (N/S)"
+        };
+        return labels[code] || code;
     }
 
     attachEvents() {
@@ -996,8 +1058,8 @@ class FilterManager {
                 th.addEventListener("click", function () {
                     const field = th.getAttribute("data-sort");
                     if (field && window.tableManager) {
-                        if (field === "fecha") {
-                            window.tableManager.setSort("timestamp");
+                        if (field === "fecha" || field === "Fecha") {
+                            window.tableManager.setSort("fecha");
                         } else {
                             window.tableManager.setSort(field);
                         }
@@ -1036,7 +1098,7 @@ class FilterManager {
         this.filters.departamento = "";
         this.filters.fenomenos = this.dataManager.fenomenos.length > 0
             ? this.dataManager.fenomenos.slice()
-            : ["GRA", "RAF", "TOR"];
+            : ["GRA", "RAF", "TOR", "FUN", "N/S"];
         this.saveToStorage();
         this.buildUI();
         this.triggerChange();
@@ -1081,6 +1143,7 @@ class FilterManager {
 
         const headers = [
             "Fecha",
+            "Horario (UTC)",
             "Localidad",
             "Departamento_corr",
             "Tipo de fenómeno CORR (GRA/RAF/TOR)",
@@ -1093,7 +1156,11 @@ class FilterManager {
 
         const rows = data.map(function (row) {
             return headers.map(function (h) {
-                const value = row[h] != null ? String(row[h]) : "";
+                let value = row[h] != null ? String(row[h]) : "";
+                // Revertir "No especificado" a "N/S" si es necesario
+                if (value === "No especificado") {
+                    value = "N/S";
+                }
                 return "\"" + value.replace(/"/g, "\"\"") + "\"";
             }).join(",");
         });
@@ -1171,11 +1238,18 @@ class DashboardController {
             const filtered = this.dataManager.filterData(filters);
             const stats = this.dataManager.getStats(filtered);
 
-            if (this.map) this.map.update(filtered);
+            // Contar registros con coordenadas para el mapa
+            const conCoordenadas = filtered.filter(function (row) {
+                const lat = row["Latitud (grados, 4 dec.)"];
+                const lon = row["Longitud (grados, 4 dec.)"];
+                return Number.isFinite(lat) && Number.isFinite(lon);
+            }).length;
+
+            if (this.map) this.map.update(conCoordenadas > 0 ? filtered : []);
             if (this.charts) this.charts.update(stats);
             if (this.table) this.table.update(filtered);
 
-            this.updateKPIs(stats, filtered.length);
+            this.updateKPIs(stats, filtered.length, conCoordenadas);
             this.ui.updateFilterStatus(this.dataManager.rawData.length, filtered.length);
             this.ui.updateDebug(getSheetsCSVUrl(), "OK", filtered.length);
         } catch (e) {
@@ -1187,13 +1261,13 @@ class DashboardController {
         }
     }
 
-    updateKPIs(stats, filteredCount) {
+    updateKPIs(stats, filteredCount, conCoordenadas) {
         const container = document.getElementById("kpiContainer");
         if (!container) return;
 
         const totalRegistros = this.dataManager.rawData.length;
         const tasaGeo = totalRegistros > 0
-            ? ((filteredCount / totalRegistros) * 100).toFixed(1)
+            ? ((conCoordenadas / totalRegistros) * 100).toFixed(1)
             : "0.0";
 
         const tipos = Object.keys(stats.byFenomeno || {}).length;
@@ -1203,25 +1277,25 @@ class DashboardController {
             '<div class="col-md-3">' +
             '<div class="dashboard-card text-center">' +
             '<h3 class="text-primary">' + filteredCount + "</h3>" +
-            '<p class="mb-0 text-muted">Eventos geolocalizados en mapa</p>' +
+            '<p class="mb-0 text-muted">Registros filtrados</p>' +
             "</div></div>" +
 
             '<div class="col-md-3">' +
             '<div class="dashboard-card text-center">' +
-            '<h3 class="text-success">' + tasaGeo + "%</h3>" +
-            '<p class="mb-0 text-muted">Tasa de geolocalización sobre el total</p>' +
+            '<h3 class="text-success">' + conCoordenadas + "</h3>" +
+            '<p class="mb-0 text-muted">Eventos geolocalizados</p>' +
             "</div></div>" +
 
             '<div class="col-md-3">' +
             '<div class="dashboard-card text-center">' +
             '<h3 class="text-warning">' + tipos + "</h3>" +
-            '<p class="mb-0 text-muted">Tipos de fenómeno registrados</p>' +
+            '<p class="mb-0 text-muted">Tipos de fenómeno</p>' +
             "</div></div>" +
 
             '<div class="col-md-3">' +
             '<div class="dashboard-card text-center">' +
             '<h3 class="text-info">' + deptos + "</h3>" +
-            '<p class="mb-0 text-muted">Departamentos con reportes</p>' +
+            '<p class="mb-0 text-muted">Departamentos</p>' +
             "</div></div>";
     }
 }
