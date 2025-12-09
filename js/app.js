@@ -7,7 +7,7 @@
 /* ========================================================================== */
 
 const CONFIG = {
-    SHEET_ID: "1QiApHMT4Er6cUwy2X4gvbFM-Itp1IzYHMqlZbouPJ3g",
+    SHEET_ID: "1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s",
     GID: "542115522", // ID de la pestaña específica
     PAGE_SIZE: 50,
     MAP_CENTER: [-23.4425, -58.4438],
