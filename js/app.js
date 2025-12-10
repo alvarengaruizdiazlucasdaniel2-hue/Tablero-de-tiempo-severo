@@ -7,7 +7,8 @@
 /* ========================================================================== */
 
 const CONFIG = {
-    SHEET_ID: "1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s",
+   /* SHEET_ID: "1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s", */
+    SHEET_ID: "2PACX-1vTpagS5w4P8P9QtaGwFVLXh5Tf2ig5gEfp4LkWii2IOcI7n_HoEk5FBiFYcNSwoCl6Fx3plsP2ZjoQq",
     PAGE_SIZE: 50,
     MAP_CENTER: [-23.4425, -58.4438],
     MAP_ZOOM: 6,
@@ -21,13 +22,13 @@ const CONFIG = {
 };
 
 function getSheetsCSVUrl() {
-    return "https://docs.google.com/spreadsheets/d/" +
+    return "https://docs.google.com/spreadsheets/d/e/" +
         CONFIG.SHEET_ID +
         "/gviz/tq?tqx=out:csv";
 }
 
 function getSheetsCSVUrlPub() {
-    return "https://docs.google.com/spreadsheets/d/" +
+    return "https://docs.google.com/spreadsheets/d/e/" +
         CONFIG.SHEET_ID +
         "/pub?output=csv";
 }
