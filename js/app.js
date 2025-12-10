@@ -24,7 +24,8 @@ const CONFIG = {
 function getSheetsCSVUrl() {
     return "https://docs.google.com/spreadsheets/d/e/" +
         CONFIG.SHEET_ID +
-        "/gviz/tq?tqx=out:csv";
+       /* "/gviz/tq?tqx=out:csv";*/
+       "/pub?output=csv";
 }
 
 function getSheetsCSVUrlPub() {
