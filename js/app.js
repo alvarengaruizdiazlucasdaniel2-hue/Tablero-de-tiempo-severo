@@ -7,7 +7,12 @@
 /* ========================================================================== */
 
 const CONFIG = {
-    SHEET_ID: "1nn29309awhW9YxaxoojrSQsdGXBLhLsEjgHlRT_MNyI",
+    // SE AGREGAN URL_BASE, GVIZ_SHEET_ID, PUB_SHEET_ID
+    // SE ELIMINA SHEET_ID
+    // RAZÓN: Google Sheets NO SOPORTA ACCEDER A SUS DOS PROTOCOLOS (GVIZ Y PUB) CON UN ÚNICO MODELO DE URL, SE REQUIEREN DOS ID DISTINTOS. URL_BASE SE AGREGA PARA EVITAR ESCRIBIRLA DOS VECES EN LAS FUNCIONES QUE GENERAN LAS URL
+    URL_BASE: "https://docs.google.com/spreadsheets/",
+    GVIZ_SHEET_ID: "1RR-9_QpWa1X8HBFh4pjYndn64DnyGRpBYF0k6VMio9s",
+    PUB_SHEET_ID: "2PACX-1vTpagS5w4P8P9QtaGwFVLXh5Tf2ig5gEfp4LkWii2IOcI7n_HoEk5FBiFYcNSwoCl6Fx3plsP2ZjoQq",
     PAGE_SIZE: 50,
     MAP_CENTER: [-23.4425, -58.4438],
     MAP_ZOOM: 6,
@@ -21,15 +26,15 @@ const CONFIG = {
 };
 
 function getSheetsCSVUrl() {
-    return "https://docs.google.com/spreadsheets/d/" +
-        CONFIG.SHEET_ID +
-        "/gviz/tq?tqx=out:csv";
+    // MODIFICADO: Google Sheets NO SOPORTA ACCEDER A SUS DOS PROTOCOLOS (GVIZ Y PUB) CON UN ÚNICO MODELO DE URL
+    console.log("Probando getSheetsCSVUrl()"); // <-- DEPURACIÓN DE FLUJO
+    return CONFIG.URL_BASE + "d/" + CONFIG.GVIZ_SHEET_ID + "/gviz/tq?tqx=out:csv";
 }
 
 function getSheetsCSVUrlPub() {
-    return "https://docs.google.com/spreadsheets/d/" +
-        CONFIG.SHEET_ID +
-        "/pub?output=csv";
+    // MODIFICADO: Google Sheets NO SOPORTA ACCEDER A SUS DOS PROTOCOLOS (GVIZ Y PUB) CON UN ÚNICO MODELO DE URL
+    console.log("Probando getSheetsCSVUrlPub()"); // <-- DEPURACIÓN DE FLUJO
+    return CONFIG.URL_BASE + "d/e/" + CONFIG.PUB_SHEET_ID + "/pub?output=csv";
 }
 
 /* ========================================================================== */
@@ -270,6 +275,7 @@ class DataManager {
         this.departamentos = [];
         this.fenomenos = [];
         this.cacheFilters = new Map();
+        this.sheetsUrl = ""; // <-- PROPIEDAD AÑADIDA PARA GUARDAR LA URL EXITOSA
     }
 
     async loadData() {
@@ -301,6 +307,7 @@ class DataManager {
                     const data = CSVParser.parse(csvText);
                     this.rawData = data;
                     this.extractMetadata();
+                    this.sheetsUrl = url; // <-- LA URL EXITOSA SE GUARDA AQUÍ
                     try {
                         localStorage.setItem(CONFIG.CACHE_KEY_DATA, JSON.stringify(this.rawData));
                         localStorage.setItem(CONFIG.CACHE_KEY_TIME, String(Date.now()));
@@ -580,7 +587,7 @@ class MapManager {
             const tipo = row["Tipo de fenómeno CORR (GRA/RAF/TOR)"] || "";
             const color = MapManager.getColor(tipo);
 
-            const popup =
+            let popup = // <-- ERROR: popup SE MODIFICA POR TANTO NO PUEDE DECLARARSE CONSTANTE
                 '<div class="popup-content">' +
                 "<h6>" + Sanitizer.sanitizeText(row["Localidad"] || "Sin localidad") + "</h6>" +
                 "<div>" +
@@ -980,7 +987,12 @@ class FilterManager {
         this.loadFromStorage();
         this.buildUI();
         this.attachEvents();
-        this.triggerChange();
+        //this.triggerChange(); <-- PROVOCA UNA LLAMADA REDUNDANTE A LA INICIALIZACIÓN DEL DASHBOARD
+    }
+    
+    initialize() {
+        // AGREGADO PARA EVITAR LA INVERSIÓN DE RESPONSABILIDADES EN DashboardController
+        this.triggerChange(); // <-- MOVIDO DESDE EL CONSTRUCTOR PARA EVITAR LA INICIALIZACIÓN REDUNDANTE DEL DASHBOARD
     }
 
     buildUI() {
@@ -1200,20 +1212,26 @@ class DashboardController {
             if (!data || !data.length) {
                 throw new Error("No se recibieron datos válidos desde la hoja");
             }
+            
+            // Ahora dataManager.sheetsUrl contiene la URL exitosa.
+            Logger.info("URL Sheets configurada:", this.dataManager.sheetsUrl); // <-- ¡NUEVO LUGAR SEGURO PARA CONOCER LA URL EFECTIVA
+            console.log("URL Sheets configurada:" + this.dataManager.sheetsUrl);
 
             this.map = new MapManager("map");
             this.charts = new ChartManager();
             this.table = new TableManager();
+            this.filters = new FilterManager(this.dataManager, (filters) => { // <-- REUBICADO PARA UNIFICAR EL LUGAR DONDE SE INSTANCIAN LOS MANEJADORES
+                console.log("Datos listos. Llamando a updateDashboard().");
+                this.updateDashboard(filters);
+            });
 
             window.dataManager = this.dataManager;
             window.tableManager = this.table;
 
-            this.filters = new FilterManager(this.dataManager, (filters) => {
-                this.updateDashboard(filters);
-            });
-
-            this.updateDashboard(this.filters.filters);
+            // this.updateDashboard(this.filters.filters); <-- COMENTADO PARA EVITAR LA INICIALIZACIÓN REDUNDANTE DEL DASHBOARD
             this.ui.showMain();
+            
+            this.filters.initialize() // <-- ¡AÑADIDO PARA INICIAR EL DASHBOARD UNA ÚNICA VEZ (LLAMADA CREADA PARA EVITAR INVOCAR EL TRIGGER DE UNA CLASE DISTINTA)
 
             if ("serviceWorker" in navigator) {
                 navigator.serviceWorker
@@ -1234,6 +1252,7 @@ class DashboardController {
     }
 
     updateDashboard(filters) {
+        console.log("Iniciando el renderizado (updateDashboard)"); // <-- DEPURACIÓN DE FLUJO
         try {
             const filtered = this.dataManager.filterData(filters);
             const stats = this.dataManager.getStats(filtered);
@@ -1251,7 +1270,7 @@ class DashboardController {
 
             this.updateKPIs(stats, filtered.length, conCoordenadas);
             this.ui.updateFilterStatus(this.dataManager.rawData.length, filtered.length);
-            this.ui.updateDebug(getSheetsCSVUrl(), "OK", filtered.length);
+            this.ui.updateDebug(this.dataManager.sheetsUrl, "OK", filtered.length); // <-- USA LA URL CORRECTA, DE DONDE EFECTIVAMENTE SE DESCARGARON LOS DATOS
         } catch (e) {
             Logger.error("Error al actualizar el tablero", e);
             this.ui.showError(
@@ -1306,10 +1325,13 @@ class DashboardController {
 
 (function () {
     function start() {
+        console.log("Iniciando la aplicación"); // <-- DEPURACIÓN DE FLUJO
         const app = new DashboardController();
+        console.log("DashboardController creada"); // <-- DEPURACIÓN DE FLUJO
         app.init();
+        console.log("Aplicación iniciada"); // <-- DEPURACIÓN DE FLUJO
         window.DashboardApp = app;
-        Logger.info("URL Sheets configurada:", getSheetsCSVUrl());
+        // Logger.info("URL Sheets configurada: ", app.dataManager.sheetsUrl || "Cargando..."); <-- ERROR ASÍNCRONO, NO SE TIENE CERTEZA AÚN DE CUAL URL SE USÓ, MOVIDO A DashboardController.init()
     }
 
     if (document.readyState === "loading") {
